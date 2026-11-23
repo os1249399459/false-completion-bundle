@@ -30,6 +30,15 @@ import { abortDecision, categoryForIssue, type AbortReason } from './abortReason
  */
 export const DEFAULT_MAX_RETRIES = 1
 
+/**
+ * Canonical divergence-limit defaults. Single source of truth shared by the
+ * gate constructor, the entry's env fallback and the read-only status tool, so
+ * a reported limit can never drift from an enforced one.
+ */
+export const DEFAULT_MAX_STEPS_PER_TURN = 20
+export const DEFAULT_MAX_TOOL_CALLS_PER_TURN = 30
+export const DEFAULT_MAX_CONSECUTIVE_NO_PROGRESS_STEPS = 3
+
 export interface CompletionGateConfig {
   /** Ledger lookup used to resolve evidence_ids. */
   readonly ledger: LedgerReader
@@ -169,9 +178,9 @@ export class CompletionGate implements CompletionHookAdapter {
     this.sessionId = config.sessionId
     // Conservative defaults: enough headroom for normal multi-step tasks while
     // bounding runaway loops; see README#divergence-defaults.
-    this.maxStepsPerTurn = Math.max(1, config.maxStepsPerTurn ?? 20)
-    this.maxToolCallsPerTurn = Math.max(0, config.maxToolCallsPerTurn ?? 30)
-    this.maxConsecutiveNoProgressSteps = Math.max(1, config.maxConsecutiveNoProgressSteps ?? 3)
+    this.maxStepsPerTurn = Math.max(1, config.maxStepsPerTurn ?? DEFAULT_MAX_STEPS_PER_TURN)
+    this.maxToolCallsPerTurn = Math.max(0, config.maxToolCallsPerTurn ?? DEFAULT_MAX_TOOL_CALLS_PER_TURN)
+    this.maxConsecutiveNoProgressSteps = Math.max(1, config.maxConsecutiveNoProgressSteps ?? DEFAULT_MAX_CONSECUTIVE_NO_PROGRESS_STEPS)
   }
 
   /**

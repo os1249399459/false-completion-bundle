@@ -1,7 +1,7 @@
 {
   "name": "false-completion-bundle",
   "description": "Completion gate bundle: blocks done claims without verifiable evidence, records abort reasons, and exposes a read-only get_gate_status tool.",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "private": false,
   "type": "module",
   "engines": {
@@ -20,7 +20,7 @@
     "cordis.patch.yml",
     "dist/**",
     "src/**",
-    "entry/**",
+    "entry/index.ts",
     "python/mcp_verifier/requirements.txt",
     "python/mcp_verifier/server.py",
     "locale/en.json",

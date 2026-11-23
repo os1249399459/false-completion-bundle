@@ -5,8 +5,14 @@
  * It never evaluates claims, triggers retries, or emits evidence.
  */
 import { readFileSync } from 'node:fs';
-import { DEFAULT_MAX_RETRIES } from './completionGate.js';
-const DEFAULT_LIMITS = { steps: 20, toolCalls: 30, noProgress: 3 };
+import { DEFAULT_MAX_CONSECUTIVE_NO_PROGRESS_STEPS, DEFAULT_MAX_RETRIES, DEFAULT_MAX_STEPS_PER_TURN, DEFAULT_MAX_TOOL_CALLS_PER_TURN, } from './completionGate.js';
+/** Re-exported from the gate so the reported limits cannot drift from the
+ *  enforced ones (same constants the constructor falls back to). */
+const DEFAULT_LIMITS = {
+    steps: DEFAULT_MAX_STEPS_PER_TURN,
+    toolCalls: DEFAULT_MAX_TOOL_CALLS_PER_TURN,
+    noProgress: DEFAULT_MAX_CONSECUTIVE_NO_PROGRESS_STEPS,
+};
 /** Resolve the abort log path exactly like src/gate/abortLog.ts does. */
 export function resolveAbortLogPath(env = process.env) {
     const configured = env['DSH_ABORT_LOG'];

@@ -6,7 +6,7 @@
  *   Payload: { agent, turn, signal }. Feedback is delivered by agent.steer().
  * - Per-agent listeners register on agent.ctx inside 'agent/created'.
  */
-import { CompletionGate, DEFAULT_MAX_RETRIES } from '../src/gate/completionGate.js'
+import { CompletionGate, DEFAULT_MAX_RETRIES, DEFAULT_MAX_STEPS_PER_TURN, DEFAULT_MAX_TOOL_CALLS_PER_TURN, DEFAULT_MAX_CONSECUTIVE_NO_PROGRESS_STEPS } from '../src/gate/completionGate.js'
 import { DocumentedSuspendAdapter } from '../src/gate/suspendAdapter.js'
 import { OtelLedgerAdapter } from '../src/adapters/ledgerAdapter.js'
 import { printProbe, probeVerifiers } from '../src/telemetry/verifierProbe.js'
@@ -35,6 +35,21 @@ function abortWith(reason: AbortReason, cancel: (cause: { kind: 'hook'; reason: 
   cancel({ kind: 'hook', reason: decision.reason })
 }
 
+
+/**
+ * Resolve the real DSH session id for an agent, or undefined when the session
+ * carries none. Never invented: a fabricated id (e.g. a static 'dsh-host')
+ * makes suspend and gate records unattributable.
+ *
+ * Takes a structural argument rather than `Agent`: the host's own
+ * `@deepseek-ai/dsh-agent` types come from a separate install than the
+ * bundle's, so naming the type here is a cross-install type error with no
+ * runtime meaning.
+ */
+function sessionIdOf(agent: { session?: unknown }): string | undefined {
+  const id = (agent.session as { id?: unknown } | undefined)?.id
+  return typeof id === 'string' && id.length > 0 ? id : undefined
+}
 
 function feedbackMessage(feedback: readonly unknown[], turn: number): UserMessage {
   const text = feedback
@@ -90,6 +105,13 @@ export function apply(ctx: Context): void {
   let ledger: Record<string, boolean> = {}
   try { ledger = JSON.parse(raw) } catch { ledger = {} }
   const maxRetries = Number(process.env['FALSE_COMPLETION_MAX_RETRIES'] ?? DEFAULT_MAX_RETRIES)
+  // Divergence limits: environment-driven, with the gate's own constants as the
+  // single source of truth for defaults. Values are passed to the constructor
+  // below — reading them here and not passing them would be a silent no-op.
+  const maxStepsPerTurn = Number(process.env['FALSE_COMPLETION_MAX_STEPS'] ?? DEFAULT_MAX_STEPS_PER_TURN)
+  const maxToolCallsPerTurn = Number(process.env['FALSE_COMPLETION_MAX_TOOL_CALLS'] ?? DEFAULT_MAX_TOOL_CALLS_PER_TURN)
+  const maxConsecutiveNoProgressSteps = Number(process.env['FALSE_COMPLETION_MAX_NO_PROGRESS'] ?? DEFAULT_MAX_CONSECUTIVE_NO_PROGRESS_STEPS)
+  console.error(`[false-completion-gate] limits steps=${maxStepsPerTurn} toolCalls=${maxToolCallsPerTurn} noProgress=${maxConsecutiveNoProgressSteps}`)
 
   let bound: CompletionGate | undefined
   let ledgerAdapter: OtelLedgerAdapter | undefined
@@ -100,16 +122,20 @@ export function apply(ctx: Context): void {
     const profileContext = (ctx as unknown as { get?: (k: string) => { name?: string } | undefined }).get?.('profileContext')
     const profileId = profileContext?.name ?? process.env['DSH_PROFILE'] ?? 'unknown'
     console.error(`[false-completion-gate] OTLP endpoint = ${process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] ?? '(unset)'} profile=${profileId}`)
-    ledgerAdapter = new OtelLedgerAdapter({ sessionId: 'dsh-host', profileId })
+    // No static session id: every emission passes the real DSH session id, and
+    // a blanket 'dsh-host' default would make spans unattributable.
+    ledgerAdapter = new OtelLedgerAdapter({ profileId })
     bound = new CompletionGate({
       ledger: ledgerAdapter,
       maxRetries,
+      maxStepsPerTurn,
+      maxToolCallsPerTurn,
+      maxConsecutiveNoProgressSteps,
       suspendAdapter: new DocumentedSuspendAdapter({
         onSuspend: (record) => {
-          console.error(`[false-completion-gate] SUSPENDED ${record.ticket}: ${record.reason}`)
+          console.error(`[false-completion-gate] SUSPENDED ${record.ticket} session=${record.sessionId ?? 'unknown'}: ${record.reason}`)
         },
       }),
-      sessionId: 'dsh-host',
     })
     return () => {
       bound = undefined
@@ -129,14 +155,16 @@ export function apply(ctx: Context): void {
         const output = readPendingOutput(agent)
         console.error(`[false-completion-gate] parsed claim output status=${output ? (claimsOf(output)[0]?.status ?? 'none') : 'undefined'}`)
         if (output === undefined) return
+        // Real session id for every record in this turn (may be undefined if the
+        // host exposes none — never substituted with a static placeholder).
+        const sessionId = sessionIdOf(agent)
         // Emit real evidence spans for each claim through the OTel ledger.
         if (ledgerAdapter) {
           for (const claim of claimsOf(output)) {
             try {
               await ledgerAdapter.emitEvidence({
                 toolName: 'assistant.claim',
-                // Real DSH session id (overrides the static adapter value).
-                sessionId: String((agent.session as unknown as { id?: string }).id ?? ''),
+                ...(sessionId ? { sessionId } : {}),
                 redactedArgs: { toolName: 'assistant.claim', args: claim, redactedFields: [] },
                 outcome: {
                   isError: claim.status === 'done' && (claim.evidence_ids?.length ?? 0) === 0,
@@ -155,7 +183,7 @@ export function apply(ctx: Context): void {
             }
           }
         }
-        const decision = await gate.evaluate(output, { sessionId: 'dsh-host', turn, concludesTurn: false, signal: new AbortController().signal })
+        const decision = await gate.evaluate(output, { ...(sessionId ? { sessionId } : {}), turn, concludesTurn: false, signal: new AbortController().signal })
         // Verifier-driven override: if the model emitted a "done" claim but a
         // deterministic MCP verifier tool failed in this turn (e.g. Filesystem
         // MCP ENOENT for a fabricated path), the gate must abort even if the

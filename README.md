@@ -171,18 +171,23 @@ Judge limitations: the LLM judge is auxiliary. A `pass` requires at least one de
 Three hard limits bound a runaway turn; they are code-level and abort through
 the same completion-gate suspend path (never a prompt instruction):
 
-| Config field | Default | Meaning |
-|---|---|---|
-| `maxStepsPerTurn` | 20 | Model steps in one turn; abort at 21/20 |
-| `maxToolCallsPerTurn` | 30 | Tool calls observed in one turn; abort at 31/30 |
-| `maxConsecutiveNoProgressSteps` | 3 | Steps with no progress; abort at 3/3 |
+| Config field | Env var | Default | Meaning |
+|---|---|---|---|
+| `maxStepsPerTurn` | `FALSE_COMPLETION_MAX_STEPS` | 20 | Model steps in one turn; abort at 21/20 |
+| `maxToolCallsPerTurn` | `FALSE_COMPLETION_MAX_TOOL_CALLS` | 30 | Tool calls observed in one turn; abort at 31/30 |
+| `maxConsecutiveNoProgressSteps` | `FALSE_COMPLETION_MAX_NO_PROGRESS` | 3 | Steps with no progress; abort at 3/3 |
 
 Progress means **any** of: a claim status advances, a new `evidence_id`
 appears, or a verifier returns a new pass/fail. Repeated tool calls and
 identical claims do **not** count. Defaults are conservative enough for normal
 multi-step tasks while stopping loops before runaway token spend; three
 identical steps strongly indicates the model is stuck. All three are
-configurable in `CompletionGateConfig` with no runtime setter.
+configurable at construction time: `entry/index.ts` reads the env vars above
+and forwards them to `CompletionGateConfig`, and the defaults come from the
+exported constants (`DEFAULT_MAX_STEPS_PER_TURN`, ...) that `get_gate_status`
+also reports — so a reported limit cannot drift from an enforced one. There is
+still no runtime setter; changing a limit requires a restart (env change) or a
+rebuild (default change).
 
 Abort reasons are structured and backward compatible, e.g.
 `Completion gate suspended: ... [no_progress_exceeded (3/3)] {"limit":"no_progress_exceeded","count":3,"max":3}`.

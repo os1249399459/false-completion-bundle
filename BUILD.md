@@ -1,7 +1,7 @@
 # BUILD — rebuild, verify, and install this bundle from scratch
 
 Everything a new session needs. Verified against the repo as of 2026-11-22
-(109 tests). Run every command from the **repo root** (`~/dsh`) unless stated.
+(116 tests). Run every command from the **repo root** (`~/dsh`) unless stated.
 
 ---
 
@@ -29,7 +29,7 @@ bash scripts/start-otlp-local-sink.sh     # 127.0.0.1:4318, writes ~/.dsh/otlp-l
 ```bash
 cd ~/dsh/bundle
 pnpm run typecheck     # exits 0; no output on success
-pnpm test              # 109 tests, 17 files
+pnpm test              # 116 tests, 18 files
 pnpm run build:bundle  # tsc -p tsconfig.bundle.json  → dist/
 ```
 
@@ -54,14 +54,14 @@ building a clean copy and packing it).
 cd ~/dsh/bundle
 XDG_RUNTIME_DIR=/tmp/xdg-runtime-pnpm npm_config_cache=/tmp/fcb-npm-cache \
   npm pack --pack-destination /tmp/fcb-pack
-# → /tmp/fcb-pack/false-completion-bundle-0.1.0.tgz
+# → /tmp/fcb-pack/false-completion-bundle-0.1.5.tgz
 ```
 
 `prepack` runs `typecheck && test` automatically, so a broken tree cannot pack.
 Sanity-check the tarball contains the three things the profile needs:
 
 ```bash
-tar -tzf /tmp/fcb-pack/false-completion-bundle-0.1.0.tgz \
+tar -tzf /tmp/fcb-pack/false-completion-bundle-0.1.5.tgz \
   | grep -cE 'dist/entry/index.js|profiles/minimal.yml|locale/en.json'   # expect 3
 ```
 
@@ -80,7 +80,7 @@ $DSH --profile work --from-default-profile headless --dump-config >/dev/null
 
 # install
 XDG_RUNTIME_DIR=/tmp/xdg-runtime-pnpm $DSH plugin --profile work add \
-  /tmp/fcb-pack/false-completion-bundle-0.1.0.tgz
+  /tmp/fcb-pack/false-completion-bundle-0.1.5.tgz
 ```
 
 Then confirm the profile manifest lists the bundle **and** the resolved rows:
@@ -168,11 +168,13 @@ bash scripts/portability-smoke.sh   # packs, installs to clean DSH_HOME/cwd, che
 
 ## 8. Current state snapshot
 
-- Package: `false-completion-bundle@0.1.0`, entry `dist/entry/index.js`
+- Package: `false-completion-bundle@0.1.5`, entry `dist/entry/index.js`
+  (`entry/` holds only `index.ts`; a stray compiled `entry/index.js`
+  once shipped there and is now removed + guarded by a packaging test)
 - Default patch: `./profiles/minimal.yml` (gate + filesystem verifier only)
 - Other profiles: `standard.yml` (adds Python, requires `VERIFIER_BACKEND`),
   `strict-best-effort.yml` (all verifiers, **not** a hard gate)
-- Tests: 109 / 17 files green; typecheck clean
+- Tests: 116 / 18 files green; typecheck clean
 - Read-only status tool: `get_gate_status`
 - Docs: `README.md` (usage), `AUDIT.md` (state), `POSTMORTEM.md` (incidents),
   `TRIAGE.md` (first-response), `NAMING-INVENTORY.md` / `NAMING-DECISIONS.md`
