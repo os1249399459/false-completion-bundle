@@ -1,0 +1,68 @@
+# Default profile — zero config edits required.
+# Paths: workspace = !!js process.cwd(); MCP servers = npx package specs;
+# credentials = environment variables only. No machine-specific absolute paths.
+- insert:
+    # Gate: retry budget defaults to DEFAULT_MAX_RETRIES in
+    # src/gate/completionGate.ts (the single source of truth); override with
+    # FALSE_COMPLETION_MAX_RETRIES. On exhaustion the gate always suspends.
+    # See README#configuration and README#divergence-defaults.
+    - id: false-completion-gate
+      description: 'Completion gate: blocks done claims without verifiable evidence and records abort reasons.'
+      name: '../dist/entry/index.js'
+
+    # Deterministic filesystem verifier — always available via npx.
+    - id: false-completion-filesystem-mcp
+      description: 'Filesystem verifier: deterministically checks file existence and content hashes.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: false-completion-filesystem
+        transport: stdio
+        command: npx
+        args:
+          - '-y'
+          - '-p'
+          - '@modelcontextprotocol/server-filesystem@1.0.0'
+          - '-c'
+          - 'mcp-server-filesystem "$(pwd)"'
+        failOnStartupError: false
+
+    # Playwright verifier — optional; warns when the browser binary is missing.
+    - id: false-completion-playwright-mcp
+      description: 'UI verifier: checks page elements and browser state.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "process.env.DSH_FALSE_COMPLETION_PLAYWRIGHT !== '1'"
+      config:
+        serverName: false-completion-playwright
+        transport: stdio
+        command: npx
+        args: ['-y', '-p', '@playwright/mcp@0.0.86', '-c', 'playwright-mcp --headless']
+        failOnStartupError: false
+
+    # GitHub verifier — optional; requires GITHUB_TOKEN in the environment.
+    - id: false-completion-github-mcp
+      description: 'CI verifier: verifies commits and merges via GitHub status.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "!process.env.GITHUB_TOKEN"
+      config:
+        serverName: false-completion-github
+        transport: stdio
+        command: npx
+        args: ['-y', '-p', '@modelcontextprotocol/server-github@1.0.0', '-c', 'mcp-server-github']
+        env:
+          GITHUB_TOKEN: !!js "process.env.GITHUB_TOKEN ?? ''"
+        failOnStartupError: false
+
+    # Python grounding verifier — OFF by default: without a deterministic
+    # backend it only returns unknown and would cause frequent suspends.
+    - id: false-completion-python-mcp
+      description: 'Grounding verifier: checks factual claims against a deterministic Python backend.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: true
+      config:
+        serverName: false-completion-python
+        transport: stdio
+        command: python3
+        args: ['python/mcp_verifier/server.py']
+        env:
+          VERIFIER_BACKEND: !!js "process.env.VERIFIER_BACKEND ?? 'none'"
+        failOnStartupError: false

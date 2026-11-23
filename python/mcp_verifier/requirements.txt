@@ -1,0 +1,10 @@
+# MCP server runtime
+fastmcp>=2.10,<5
+
+# Optional verifier backends (install only the one configured via VERIFIER_BACKEND)
+# ragas>=0.2
+# trulens>=1.4
+# deepeval>=2.0
+
+# Testing
+pytest>=8.0

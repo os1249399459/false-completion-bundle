@@ -1,0 +1,18 @@
+# False-completion regression harness (declarative Promptfoo cases).
+# Provider calls the exported CompletionGate symbols; no custom test runner.
+description: False-completion gate regression suite
+
+prompts:
+  - 'Evaluate the claim document for premature completion.'
+
+providers:
+  - id: 'file://promptfoo/fixtures.mjs'
+
+tests:
+  - promptfoo/cases/no-evidence.yaml
+  - promptfoo/cases/stale-evidence.yaml
+  - promptfoo/cases/failed-tool-cited.yaml
+  - promptfoo/cases/fabricated-file-change.yaml
+  - promptfoo/cases/tests-failed.yaml
+  - promptfoo/cases/judge-only-pass.yaml
+  - promptfoo/cases/valid-claim.yaml

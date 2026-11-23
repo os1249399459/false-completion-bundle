@@ -1,0 +1,64 @@
+# Strict profile — all verifiers required; "no verification, no completion".
+# Any missing environment dependency aborts startup with a clear message.
+# Requirements: browser (npx playwright install chromium), GITHUB_TOKEN,
+# python venv + a deterministic backend (see README#python).
+- insert:
+    - id: false-completion-gate
+      description: 'Completion gate: blocks done claims without verifiable evidence and records abort reasons.'
+      name: '../dist/entry/index.js'
+
+    - id: false-completion-filesystem-mcp
+      description: 'Filesystem verifier: deterministically checks file existence and content hashes.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: false-completion-filesystem
+        transport: stdio
+        command: npx
+        args:
+          - '-y'
+          - '-p'
+          - '@modelcontextprotocol/server-filesystem@1.0.0'
+          - '-c'
+          - 'mcp-server-filesystem "$(pwd)"'
+        failOnStartupError: true
+
+    # Playwright required — fail startup when DSH_FALSE_COMPLETION_PLAYWRIGHT
+    # is not enabled (browser must be installed first).
+    - id: false-completion-playwright-mcp
+      description: 'UI verifier: checks page elements and browser state.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "(() => { if (process.env.DSH_FALSE_COMPLETION_PLAYWRIGHT !== '1') throw new Error('strict-best-effort.yml: Playwright required. Run: npx playwright install chromium && export DSH_FALSE_COMPLETION_PLAYWRIGHT=1'); return false })()"
+      config:
+        serverName: false-completion-playwright
+        transport: stdio
+        command: npx
+        args: ['-y', '-p', '@playwright/mcp@0.0.86', '-c', 'playwright-mcp --headless']
+        failOnStartupError: true
+
+    # Python required — deterministic backend mandatory.
+    - id: false-completion-python-mcp
+      description: 'Grounding verifier: checks factual claims against a deterministic Python backend.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "(() => { if (!['ragas','trulens','deepeval'].includes(process.env.VERIFIER_BACKEND ?? '')) throw new Error('strict-best-effort.yml: Python deterministic backend required. Setup: python3 -m venv .venv && pip install -r python/mcp_verifier/requirements.txt && export VERIFIER_BACKEND=ragas'); return false })()"
+      config:
+        serverName: false-completion-python
+        transport: stdio
+        command: python3
+        args: ['python/mcp_verifier/server.py']
+        env:
+          VERIFIER_BACKEND: !!js "process.env.VERIFIER_BACKEND"
+        failOnStartupError: true
+
+    # GitHub required — token mandatory.
+    - id: false-completion-github-mcp
+      description: 'CI verifier: verifies commits and merges via GitHub status.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "(() => { if (!process.env.GITHUB_TOKEN) throw new Error('strict-best-effort.yml: GitHub verifier required. Set GITHUB_TOKEN'); return false })()"
+      config:
+        serverName: false-completion-github
+        transport: stdio
+        command: npx
+        args: ['-y', '-p', '@modelcontextprotocol/server-github@1.0.0', '-c', 'mcp-server-github']
+        env:
+          GITHUB_TOKEN: !!js "process.env.GITHUB_TOKEN"
+        failOnStartupError: true

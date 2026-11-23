@@ -1,0 +1,34 @@
+# Sample cordis.patch.yml — declarative MCP client config for the verifier adapters.
+# Servers are existing MCP servers; no custom server is bundled here.
+- insert:
+    - id: filesystem-mcp
+      name: '@modelcontextprotocol/server-filesystem'
+      config:
+        # Existing Filesystem MCP server; allowed roots constrain verification.
+        roots:
+          - ${WORKSPACE_ROOT}
+    - id: playwright-mcp
+      name: '@playwright/mcp'
+      config:
+        # Existing Playwright MCP server; browser is owned by the MCP server.
+        headless: true
+    - id: python-grounding-mcp
+      name: 'python/mcp_verifier/server.py'
+      # FastMCP server wrapping Ragas/TruLens/DeepEval. Started by the Host's
+      # MCP client runner; no TS-side bridge logic.
+      config:
+        transport: stdio
+        env:
+          VERIFIER_BACKEND: ${VERIFIER_BACKEND}
+          VERIFIER_JUDGE_MODEL: ${VERIFIER_JUDGE_MODEL}
+          VERIFIER_JUDGE_API_KEY: ${VERIFIER_JUDGE_API_KEY}
+          VERIFIER_DETERMINISTIC_THRESHOLD: ${VERIFIER_DETERMINISTIC_THRESHOLD}
+          EVIDENCE_JSON: ${EVIDENCE_JSON}
+    - id: false-completion-verifier
+      name: './src/verifier/verifierDispatcher.ts'
+      config:
+        adapters:
+          cli: './src/verifier/cliVerifier.ts'
+          filesystem: './src/verifier/filesystemMcpVerifier.ts'
+          playwright: './src/verifier/playwrightMcpVerifier.ts'
+          python: './src/verifier/pythonMcpVerifier.ts'

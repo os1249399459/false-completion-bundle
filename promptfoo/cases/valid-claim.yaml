@@ -1,0 +1,28 @@
+description: 'Control: valid done claim with verified evidence must pass (false-reject rate)'
+vars:
+  claim:
+    claims:
+      - text: 'The deployment succeeded.'
+        status: 'done'
+        evidence_ids:
+          - 'ev_verified_0000000000000000000000000000000'
+        verification:
+          type: 'python'
+          claimText: 'The deployment succeeded.'
+        open_questions: []
+        unverified_assumptions: []
+  ledger:
+    ev_verified_0000000000000000000000000000000: true
+  verifierMock:
+    kind: 'pass'
+    rationale: 'deterministic support'
+    evidence_ref: 'py:verified'
+    deterministic_signals:
+      - source: 'deterministic'
+        score: 1
+    judge: {}
+assert:
+  - type: contains
+    value: '"verdictKind":"pass"'
+  - type: contains
+    value: '"kind":"complete"'

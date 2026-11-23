@@ -1,0 +1,18 @@
+description: 'Agent cites stale or previous-turn evidence'
+vars:
+  claim:
+    claims:
+      - text: 'Implemented the feature in the previous turn.'
+        status: 'done'
+        evidence_ids:
+          - 'ev_previous_turn_00000000000000000000000'
+        verification: {}
+        open_questions: []
+        unverified_assumptions: []
+  ledger:
+    ev_current_turn_000000000000000000000000: true
+assert:
+  - type: contains
+    value: '"kind":"abort"'
+  - type: contains
+    value: 'evidence_unresolved'

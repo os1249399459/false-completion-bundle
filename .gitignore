@@ -1,0 +1,7 @@
+node_modules/
+.venv/
+.promptfoo/
+.promptfoo-build/
+dist-pack/
+*.log
+.DS_Store

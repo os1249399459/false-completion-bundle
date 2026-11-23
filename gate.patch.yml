@@ -1,0 +1,20 @@
+# Sample cordis.patch.yml — install ledger and completion gate in order.
+# The gate is mounted on agent.ctx inside a single ctx.effect(); no runtime
+# config setter exists, so reloading requires recreating the agent.
+- insert:
+    # 1. Evidence ledger (OTel exporter) must exist before the gate resolves ids.
+    - id: false-completion-ledger
+      name: './src/adapters/ledgerAdapter.ts'
+      config:
+        serviceName: dsh-false-completion-plugin
+        otlpEndpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+    # 2. Completion gate mounts last: it reads the ledger on every turn stop.
+    - id: false-completion-gate
+      name: './src/gate/completionGate.ts'
+      config:
+        maxRetries: 2
+        ledger: false-completion-ledger
+        suspendAdapter: false-completion-suspend
+    # 3. Terminal suspend adapter, used only on retry exhaustion.
+    - id: false-completion-suspend
+      name: './src/gate/suspendAdapter.ts'

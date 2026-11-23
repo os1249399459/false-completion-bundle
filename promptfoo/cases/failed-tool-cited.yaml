@@ -1,0 +1,18 @@
+description: 'Agent cites a failed tool call as success'
+vars:
+  claim:
+    claims:
+      - text: 'Test suite passed.'
+        status: 'done'
+        evidence_ids:
+          - 'ev_failed_tool_000000000000000000000000'
+        verification: {}
+        open_questions: []
+        unverified_assumptions: []
+  ledger:
+    ev_failed_tool_000000000000000000000000: false
+assert:
+  - type: contains
+    value: '"kind":"abort"'
+  - type: contains
+    value: 'evidence_failed'

@@ -1,0 +1,111 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "dsh-false-completion-plugin"
+            }
+          }
+        ],
+        "droppedAttributesCount": 0
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "dsh-false-completion-plugin"
+          },
+          "spans": [
+            {
+              "traceId": "86921db896eb1a5a3e977e5de2849495",
+              "spanId": "679f06ea3d4bad60",
+              "name": "tool.call.evidence",
+              "kind": 1,
+              "startTimeUnixNano": "1795222559843000000",
+              "endTimeUnixNano": "1795222559843059458",
+              "attributes": [
+                {
+                  "key": "evidence.tool.name",
+                  "value": {
+                    "stringValue": "assistant.claim"
+                  }
+                },
+                {
+                  "key": "evidence.args.hash",
+                  "value": {
+                    "stringValue": "ec824b3f8780667cc86cbcb092cab53b5c3340e4b3f17b05d32b82836817e6e5"
+                  }
+                },
+                {
+                  "key": "evidence.result.hash",
+                  "value": {
+                    "stringValue": "89617f96cd3bb8ebe729af1f5eda352ae307c1b10558674e37ef3b1270ec6719"
+                  }
+                },
+                {
+                  "key": "evidence.exit_code",
+                  "value": {
+                    "stringValue": "OK"
+                  }
+                },
+                {
+                  "key": "evidence.error.name",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "evidence.error.code",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "evidence.timestamp",
+                  "value": {
+                    "stringValue": "2026-11-21T00:55:59.842Z"
+                  }
+                },
+                {
+                  "key": "evidence.snapshot",
+                  "value": {
+                    "stringValue": "{\"source\":\"unknown\",\"diffs\":[],\"beforeRef\":null,\"afterRef\":null}"
+                  }
+                },
+                {
+                  "key": "evidence.redacted_fields",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "evidence.session.id",
+                  "value": {
+                    "stringValue": "dsh-host"
+                  }
+                },
+                {
+                  "key": "evidence.ref",
+                  "value": {
+                    "stringValue": "ev_3e918e67ffa1b27496332aedb862c598"
+                  }
+                }
+              ],
+              "droppedAttributesCount": 0,
+              "events": [],
+              "droppedEventsCount": 0,
+              "status": {
+                "code": 0
+              },
+              "links": [],
+              "droppedLinksCount": 0,
+              "flags": 257
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+# Standard profile — minimal + Python grounding verifier.
+# Refuses to start unless a deterministic verifier backend is configured,
+# because without one the Python verifier only returns `unknown`.
+# Setup (prints on failure):
+#   python3 -m venv .venv
+#   pip install -r python/mcp_verifier/requirements.txt
+#   export VERIFIER_BACKEND=ragas        # or trulens | deepeval
+- insert:
+    - id: false-completion-gate
+      description: 'Completion gate: blocks done claims without verifiable evidence and records abort reasons.'
+      name: '../dist/entry/index.js'
+
+    - id: false-completion-filesystem-mcp
+      description: 'Filesystem verifier: deterministically checks file existence and content hashes.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: false-completion-filesystem
+        transport: stdio
+        command: npx
+        args:
+          - '-y'
+          - '-p'
+          - '@modelcontextprotocol/server-filesystem@1.0.0'
+          - '-c'
+          - 'mcp-server-filesystem "$(pwd)"'
+        failOnStartupError: false
+
+    - id: false-completion-playwright-mcp
+      description: 'UI verifier: checks page elements and browser state.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "process.env.DSH_FALSE_COMPLETION_PLAYWRIGHT !== '1'"
+      config:
+        serverName: false-completion-playwright
+        transport: stdio
+        command: npx
+        args: ['-y', '-p', '@playwright/mcp@0.0.86', '-c', 'playwright-mcp --headless']
+        failOnStartupError: false
+
+    # Python verifier required. !!js throws with the exact setup command when
+    # no deterministic backend is configured, so the profile cannot start.
+    - id: false-completion-python-mcp
+      description: 'Grounding verifier: checks factual claims against a deterministic Python backend.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "(() => { if (!['ragas','trulens','deepeval'].includes(process.env.VERIFIER_BACKEND ?? '')) throw new Error('standard.yml: VERIFIER_BACKEND must be ragas|trulens|deepeval. Setup: python3 -m venv .venv && pip install -r python/mcp_verifier/requirements.txt && export VERIFIER_BACKEND=ragas'); return false })()"
+      config:
+        serverName: false-completion-python
+        transport: stdio
+        command: python3
+        args: ['python/mcp_verifier/server.py']
+        env:
+          VERIFIER_BACKEND: !!js "process.env.VERIFIER_BACKEND"
+        failOnStartupError: true
+
+    - id: false-completion-github-mcp
+      description: 'CI verifier: verifies commits and merges via GitHub status.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "!process.env.GITHUB_TOKEN"
+      config:
+        serverName: false-completion-github
+        transport: stdio
+        command: npx
+        args: ['-y', '-p', '@modelcontextprotocol/server-github@1.0.0', '-c', 'mcp-server-github']
+        env:
+          GITHUB_TOKEN: !!js "process.env.GITHUB_TOKEN ?? ''"
+        failOnStartupError: false

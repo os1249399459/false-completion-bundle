@@ -1,0 +1,68 @@
+# DSH bundle patch — loaded via bundle manifest dsh.bundle.patch in package.json.
+#
+# Loader syntax (CONFIRMED from dsh-base/cordis.patch.yml and the composition
+# reference skill): dynamic values use `!!js <expression>`, evaluated in the
+# plugin's context. `${ENV}` interpolation is NOT supported and caused a path
+# loop in an earlier smoke run. `!!js process.cwd()` is the documented idiom
+# for the workspace root.
+- insert:
+    # Gate plugin (built from entry/index.ts -> dist/entry/index.js).
+    - id: false-completion-gate
+      description: 'Completion gate: blocks done claims without verifiable evidence and records abort reasons.'
+      name: './dist/entry/index.js'
+
+    # Filesystem MCP verifier — deterministic file existence/content checks.
+    # Command points at the locally resolved server package so no network/registry
+    # call happens at startup. Root = current workspace via !!js.
+    - id: false-completion-filesystem-mcp
+      description: 'Filesystem verifier: deterministically checks file existence and content hashes.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: false-completion-filesystem
+        transport: stdio
+        command: node
+        args:
+          - /home/hex636869/.npm/_npx/a3241bba59c344f5/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js
+          - !!js process.cwd()
+        failOnStartupError: false
+
+    # Playwright MCP verifier — browser element/text/state assertions.
+    - id: false-completion-playwright-mcp
+      description: 'UI verifier: checks page elements and browser state.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: false-completion-playwright
+        transport: stdio
+        command: node
+        args:
+          - /home/hex636869/.npm/_npx/86170c4cd1c5da32/node_modules/@playwright/mcp/cli.js
+          - --headless
+        failOnStartupError: false
+
+    # Python grounding verifier (FastMCP over stdio). The venv lives at the
+    # BUNDLE root (bundle/.venv) and was moved there intact during consolidation;
+    # 5/5 Python tests pass. ABSOLUTE paths are required because the MCP client
+    # resolves command/args relative to the profile cwd, not the bundle.
+    - id: false-completion-python-mcp
+      description: 'Grounding verifier: checks factual claims against a deterministic Python backend.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: false-completion-python
+        transport: stdio
+        command: /home/hex636869/dsh/bundle/.venv/bin/python
+        args: ['/home/hex636869/dsh/bundle/python/mcp_verifier/server.py']
+        failOnStartupError: false
+
+    # GitHub MCP — DISABLED WITH REASON: it requires a GitHub token which is not
+    # present in this environment. Enabling it without credentials makes the
+    # client fail/reconnect continuously, which is worse than leaving it off.
+    - id: false-completion-github-mcp
+      description: 'CI verifier: verifies commits and merges via GitHub status.'
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: true
+      config:
+        serverName: false-completion-github
+        transport: stdio
+        command: npx
+        args: ['-y', '@modelcontextprotocol/server-github']
+        failOnStartupError: false

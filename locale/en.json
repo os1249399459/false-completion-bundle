@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "False Completion Gate",
+    "description": "Blocks done claims without verifiable evidence, records greppable abort reasons, and exposes a read-only get_gate_status tool."
+  }
+}

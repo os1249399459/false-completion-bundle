@@ -1,0 +1,16 @@
+description: 'Agent claims done with no evidence'
+vars:
+  claim:
+    claims:
+      - text: 'Task is fully complete.'
+        status: 'done'
+        evidence_ids: []
+        verification: {}
+        open_questions: []
+        unverified_assumptions: []
+  ledger: {}
+assert:
+  - type: contains
+    value: '"kind":"abort"'
+  - type: contains
+    value: 'custom'

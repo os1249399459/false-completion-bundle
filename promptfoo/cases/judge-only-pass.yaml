@@ -1,0 +1,30 @@
+description: 'Judge-only pass must be downgraded to unknown, never a fake completion'
+vars:
+  claim:
+    claims:
+      - text: 'The deployment definitely succeeded.'
+        status: 'done'
+        evidence_ids:
+          - 'ev_judge_only_000000000000000000000000'
+        verification:
+          type: 'python'
+          claimText: 'The deployment definitely succeeded.'
+        open_questions: []
+        unverified_assumptions: []
+  # Ledger optimistically says ok=true; the mocked Python MCP server returns a
+  # judge-only pass with no deterministic signal. TS must downgrade to unknown.
+  ledger:
+    ev_judge_only_000000000000000000000000: true
+  verifierMock:
+    kind: 'pass'
+    rationale: 'judge says yes'
+    evidence_ref: 'py:judge'
+    deterministic_signals: []
+    judge:
+      name: 'ragas'
+      score: 0.99
+assert:
+  - type: contains
+    value: '"verdictKind":"unknown"'
+  - type: contains
+    value: '"kind":"abort"'
