@@ -10,7 +10,7 @@ import { CompletionGate, DEFAULT_MAX_RETRIES, DEFAULT_MAX_STEPS_PER_TURN, DEFAUL
 import { DocumentedSuspendAdapter } from '../src/gate/suspendAdapter.js'
 import { OtelLedgerAdapter } from '../src/adapters/ledgerAdapter.js'
 import { printProbe, probeVerifiers } from '../src/telemetry/verifierProbe.js'
-import { abortDecision, formatAbortLine, type AbortReason } from '../src/gate/abortReason.js'
+import { abortDecision, type AbortReason } from '../src/gate/abortReason.js'
 import { emitAbortLine } from '../src/gate/abortLog.js'
 import { logDebug } from '../src/log.js'
 import { buildGateStatus, formatGateStatus } from '../src/gate/gateStatus.js'
@@ -102,9 +102,10 @@ export function apply(ctx: Context): void {
   // Gate config from the environment with zero-edit defaults:
   // Smoke-run options come from the environment (no inject: keeps the plugin
   // loadable in any profile without declaring host services).
-  const raw = process.env['FALSE_COMPLETION_LEDGER'] ?? '{}'
-  let ledger: Record<string, boolean> = {}
-  try { ledger = JSON.parse(raw) } catch { ledger = {} }
+  // NOTE: FALSE_COMPLETION_LEDGER used to be parsed here into a local that was
+  // never read — dead config that looked wired but did nothing. Evidence flows
+  // through OtelLedgerAdapter (OTEL_EXPORTER_OTLP_ENDPOINT) instead, so the
+  // variable was removed rather than left as a silent no-op.
   const maxRetries = Number(process.env['FALSE_COMPLETION_MAX_RETRIES'] ?? DEFAULT_MAX_RETRIES)
   // Divergence limits: environment-driven, with the gate's own constants as the
   // single source of truth for defaults. Values are passed to the constructor
@@ -213,6 +214,10 @@ export function apply(ctx: Context): void {
       })
       return () => dispose()
     }, 'false-completion-gate per-agent')
+    // The event contract is `undefined | Promise<undefined>`: an implicit `void`
+    // return is not assignable, so state it explicitly. Registration itself is
+    // synchronous and has no deferred work to await.
+    return undefined
   })
 }
 

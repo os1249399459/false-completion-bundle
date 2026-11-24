@@ -197,6 +197,8 @@ export interface CompletionContext {
  * abort by `agent.cancel(cause)`. This adapter expresses intent only; the
  * DSH-specific delivery implementation is a later-phase TODO (TODO-3).
  */
+import type { AbortCategory } from '../gate/abortReason.js'
+
 export type CompletionDecision =
   /** Let the turn close (do not steer or cancel). */
   | { readonly kind: 'complete' }
@@ -210,7 +212,7 @@ export type CompletionDecision =
       /** Structured twin; optional so existing callers keep compiling. */
       readonly abortDetail?: {
         readonly kind: 'hook';
-        readonly category: string;
+        readonly category: AbortCategory;
         readonly claim_text?: string;
         readonly evidence_ids?: readonly string[];
         readonly verifier?: { readonly type: string; readonly detail: string };

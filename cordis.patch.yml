@@ -9,7 +9,7 @@
     # Gate plugin (built from entry/index.ts -> dist/entry/index.js).
     - id: false-completion-gate
       description: 'Completion gate: blocks done claims without verifiable evidence and records abort reasons.'
-      name: './dist/entry/index.js'
+      name: 'false-completion-bundle'
 
     # Filesystem MCP verifier — deterministic file existence/content checks.
     # Command points at the locally resolved server package so no network/registry
