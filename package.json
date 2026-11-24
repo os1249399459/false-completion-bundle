@@ -1,7 +1,7 @@
 {
   "name": "false-completion-bundle",
   "description": "Completion gate bundle: blocks done claims without verifiable evidence, records abort reasons, and exposes a read-only get_gate_status tool.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": false,
   "type": "module",
   "engines": {

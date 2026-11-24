@@ -12,6 +12,7 @@ import { OtelLedgerAdapter } from '../src/adapters/ledgerAdapter.js'
 import { printProbe, probeVerifiers } from '../src/telemetry/verifierProbe.js'
 import { abortDecision, formatAbortLine, type AbortReason } from '../src/gate/abortReason.js'
 import { emitAbortLine } from '../src/gate/abortLog.js'
+import { logDebug } from '../src/log.js'
 import { buildGateStatus, formatGateStatus } from '../src/gate/gateStatus.js'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { MessageId } from '@deepseek-ai/dsh-llm/brand'
@@ -143,17 +144,17 @@ export function apply(ctx: Context): void {
   }, 'false-completion-gate lifecycle')
 
   ctx.on('agent/created', (payload) => {
-    console.error('[false-completion-gate] agent/created received; binding turn-stopping')
+    logDebug('[false-completion-gate] agent/created received; binding turn-stopping')
     const { agent } = payload
     agent.ctx.effect(() => {
       const dispose = agent.ctx.on('agent/turn-stopping', async ({ turn }) => {
-        console.error(`[false-completion-gate] turn-stopping fired turn=${turn}`)
+        logDebug(`[false-completion-gate] turn-stopping fired turn=${turn}`)
         const gate = bound
         if (!gate) return
         // Real gates read the model's final message; the smoke profile binds a
         // fixture claim through the gate's one-shot output.
         const output = readPendingOutput(agent)
-        console.error(`[false-completion-gate] parsed claim output status=${output ? (claimsOf(output)[0]?.status ?? 'none') : 'undefined'}`)
+        logDebug(`[false-completion-gate] parsed claim output status=${output ? (claimsOf(output)[0]?.status ?? 'none') : 'undefined'}`)
         if (output === undefined) return
         // Real session id for every record in this turn (may be undefined if the
         // host exposes none — never substituted with a static placeholder).
@@ -231,7 +232,7 @@ function lastFailedVerifierResult(agent: Agent, _turn: number): string | undefin
     for (const event of events) {
       if (event.type !== 'tool/result') continue
       const text = JSON.stringify(event.message?.content ?? [])
-      console.error(`[false-completion-gate] tool/result isError=${event.message?.isError} err=${event.error?.code ?? '-'} text=${text.slice(0, 160)}`)
+      logDebug(`[false-completion-gate] tool/result isError=${event.message?.isError} err=${event.error?.code ?? '-'} text=${text.slice(0, 160)}`)
       const match = failurePattern.exec(text)
       const failed = event.message?.isError === true || Boolean(event.error) || Boolean(match)
       if (!failed) continue
