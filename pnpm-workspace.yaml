@@ -1,6 +1,3 @@
-storeDir: /home/hex636869/dsh/.pnpm-store
-
 allowBuilds:
   esbuild: true
   protobufjs: true
-

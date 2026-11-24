@@ -6,3 +6,4 @@ dist-pack/
 *.log
 .DS_Store
 *.bak.*
+.npmrc
