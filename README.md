@@ -27,18 +27,25 @@ in this repository:
 |---|---|---|
 | `@modelcontextprotocol/server-filesystem` | `1.0.0` | verified in real DSH turns (ENOENT + success paths) |
 | `@playwright/mcp` | `0.0.86` | present in the local npx cache; browser binary still required |
-| `@modelcontextprotocol/server-github` | `1.0.0` | pinned to the same release family; not runtime-verified here (no token) |
+| `@modelcontextprotocol/server-github` | `2025.4.8` | installs and starts (`GitHub MCP Server running on stdio`); upstream is archived, so pin stays exact |
 
 To pre-install for an offline/production deployment:
 
 ```bash
 npx -y -p @modelcontextprotocol/server-filesystem@1.0.0 -c true
 npx -y -p @playwright/mcp@0.0.86 -c true
-npx -y -p @modelcontextprotocol/server-github@1.0.0 -c true
+npx -y -p @modelcontextprotocol/server-github@2025.4.8 -c true
 export npm_config_offline=true   # fail instead of fetching during runs
 ```
 
-`tests/packaging.test.ts` fails if any profile reintroduces an unpinned spec.
+`tests/packaging.test.ts` fails if any profile reintroduces an unpinned spec, and
+`tests/hostEntry.test.ts` fails if the GitHub pin returns to the previously
+documented-but-nonexistent `1.0.0` (npm E404 — that row could never start).
+
+Note on `server-github`: it is **archived and unmaintained** upstream
+(`modelcontextprotocol/servers-archived`). It still installs and runs from npm,
+but it carries no security guarantees. The row is disabled unless
+`GITHUB_TOKEN` is set, so it costs nothing to profiles that do not use it.
 
 ## Python setup {#python}
 
