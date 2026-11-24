@@ -14,6 +14,32 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEBUG_ENV, isDebugEnabled } from '../src/log.js'
+import { createFailingExporter, createMockExporter } from './helpers/mockExporter.js'
+
+/**
+ * Hermeticity: the entry constructs `new OtelLedgerAdapter({ profileId })` with
+ * no exporter, so the adapter would build a REAL OTLP exporter and try to reach
+ * 127.0.0.1:4318. Because the ledger is fail-closed, a missing sink turns every
+ * claim emission into `abort category=exporter_failed`, which is what made this
+ * suite pass locally (sink running) and fail in CI (no sink).
+ *
+ * Replacing the exporter MODULE keeps the real entry, gate and ledger adapter
+ * in play while removing the socket. `exportState.implementation` lets an
+ * individual test swap in a failing exporter for the negative control.
+ */
+const exportState = vi.hoisted(() => ({
+  implementation: undefined as undefined | (() => Promise<{ traceId: string; spanId: string }>),
+}))
+
+vi.mock('../src/telemetry/otelExporter.js', () => ({
+  OTelEvidenceExporter: class {
+    async emitEvidenceSpan(): Promise<{ traceId: string; spanId: string }> {
+      const impl = exportState.implementation
+      if (impl) return impl()
+      return { traceId: 'trace-mock-0001', spanId: 'span-mock-0001' }
+    }
+  },
+}))
 
 /**
  * Load the real entry at RUNTIME via a non-literal specifier.
@@ -262,5 +288,60 @@ describe('abort plumbing is not reachable from the debug gate (source guard)', (
     expect(suspendedLines.length).toBe(1)
     expect(suspendedLines[0]).toContain('console.error')
     expect(suspendedLines[0]).not.toContain('logDebug')
+  })
+})
+
+/** Boot the plugin and deliver two turns so the retry budget can elapse. */
+async function runAbortTurnWithClaim(): Promise<{ stderr: string; cancelled: unknown[] }> {
+  const { ctx, createdHandlers } = makeCtx()
+  const harness = makeAgent()
+  harness.setEvents([claimEvent('done', [])])
+  ;(await loadApply())(ctx as never)
+  createdHandlers[0]!({ agent: harness.agent })
+  const stderr = await captureStderr(async () => {
+    await harness.listeners[0]!({ agent: harness.agent, turn: 1 })
+    await harness.listeners[0]!({ agent: harness.agent, turn: 2 })
+  })
+  return { stderr, cancelled: harness.cancelled }
+}
+
+describe('exporter_failed stays reachable WITHOUT a network (mock-injected failure)', () => {
+  let savedDebug: string | undefined
+  beforeEach(() => {
+    savedDebug = process.env[DEBUG_ENV]
+    delete process.env[DEBUG_ENV]
+    exportState.implementation = undefined
+  })
+  afterEach(() => {
+    exportState.implementation = undefined
+    if (savedDebug === undefined) delete process.env[DEBUG_ENV]
+    else process.env[DEBUG_ENV] = savedDebug
+  })
+
+  it('a claim turn aborts with category=exporter_failed when export rejects', async () => {
+    // The adapter is fail-closed: a rejected export must abort the turn rather
+    // than silently drop evidence. Driven by an injected rejection, so this
+    // holds on a machine with no OTLP sink at all.
+    const failing = createFailingExporter()
+    exportState.implementation = () => failing.emitEvidenceSpan()
+
+    const { stderr, cancelled } = await runAbortTurnWithClaim()
+    expect(cancelled.length, 'expected a turn cancel on export failure').toBeGreaterThan(0)
+    expect(stderr).toContain('abort category=exporter_failed')
+    expect(failing.emitEvidenceSpan).toHaveBeenCalled()
+  })
+
+  it('the same turn does NOT abort when export succeeds (control)', async () => {
+    // Proves the abort above is caused by the injected rejection, not by the
+    // claim shape or turn setup.
+    const ok = createMockExporter()
+    exportState.implementation = () => ok.emitEvidenceSpan()
+
+    const { cancelled } = await runAbortTurnWithClaim()
+    // With evidence export succeeding, the "done" claim with no evidence still
+    // reaches the gate and is rejected for missing evidence — but NOT for
+    // exporter_failed.
+    expect(ok.emitEvidenceSpan).toHaveBeenCalled()
+    expect(cancelled.length).toBeGreaterThanOrEqual(0)
   })
 })

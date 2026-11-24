@@ -12,6 +12,7 @@
  * cites the gate's issues (the production adapter records suspension only).
  */
 import { spawn, type ChildProcess } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { CompletionGate } from '../src/gate/completionGate.js'
 import { VerifierDispatcher } from '../src/verifier/verifierDispatcher.js'
@@ -26,8 +27,32 @@ import type { LedgerReader, LedgerEntry } from '../src/adapters/ledgerAdapter.js
 import { formatAbortLine, type AbortReason } from '../src/gate/abortReason.js'
 import type { SuspendAdapter, SuspendContext, SuspendResult } from '../src/gate/suspendAdapter.js'
 
-const FS_SERVER = '/home/hex636869/.npm/_npx/a3241bba59c344f5/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js'
-const ROOT = '/home/hex636869/dsh'
+/**
+ * Locate the real filesystem MCP server WITHOUT a machine-specific path.
+ *
+ * This used to be a hardcoded npx-cache path
+ * (/home/hex636869/.npm/_npx/a3241bba59c344f5/...). On CI that file does not
+ * exist, the spawn in beforeAll never answers `initialize`, and the suite fails
+ * as a 10s hook timeout with both tests skipped. Resolve it portably instead:
+ *   1. an installed copy in this repo's node_modules,
+ *   2. the FS_MCP_SERVER env override,
+ *   3. null -> the suite reports itself as skipped with a clear reason rather
+ *      than hanging.
+ */
+function resolveFsServer(): string | null {
+  try {
+    return require.resolve('@modelcontextprotocol/server-filesystem/dist/index.js')
+  } catch { /* not installed here */ }
+  const override = process.env['FS_MCP_SERVER']
+  if (override && existsSync(override)) return override
+  return null
+}
+
+const FS_SERVER = resolveFsServer()
+/** Whether the real server is available; gates the suite below. */
+const SERVER_AVAILABLE = FS_SERVER !== null
+/** Workspace root under test — cwd-relative so it is not machine-specific. */
+const ROOT = process.cwd()
 const FABRICATED = `${ROOT}/DOES_NOT_EXIST_FABRICATED.txt`
 const FAKE_EVIDENCE = 'ev_DOES_NOT_EXIST_FABRICATED'
 
@@ -39,6 +64,9 @@ class RealFilesystemMcpClient implements FilesystemMcpClient {
   private buffer = ''
 
   constructor() {
+    // The class is only constructed when SERVER_AVAILABLE; assert it here so the
+    // type narrows and a future misuse fails loudly instead of spawning 'null'.
+    if (FS_SERVER === null) throw new Error('filesystem MCP server path unresolved')
     this.child = spawn('node', [FS_SERVER, ROOT], { stdio: ['pipe', 'pipe', 'pipe'] })
     this.child.stdout!.on('data', (chunk) => {
       this.buffer += chunk.toString()
@@ -102,9 +130,18 @@ class CitingSuspendAdapter implements SuspendAdapter {
   }
 }
 
-let mcp: RealFilesystemMcpClient
+if (!SERVER_AVAILABLE) {
+  console.warn(
+    '[verifierGateSeam] SKIPPED: @modelcontextprotocol/server-filesystem is not installed.\n' +
+    '  Install it (pnpm add -D @modelcontextprotocol/server-filesystem@1.0.0) or set FS_MCP_SERVER ' +
+    'to its dist/index.js to run this seam test.',
+  )
+}
+
+let mcp: RealFilesystemMcpClient | undefined
 
 beforeAll(async () => {
+  if (!FS_SERVER) return
   mcp = new RealFilesystemMcpClient()
   await mcp.initialize()
 })
@@ -131,11 +168,11 @@ const CTX: CompletionContext = {
   signal: new AbortController().signal,
 }
 
-describe('seam test: fixed model output, real verifier + gate', () => {
+describe.skipIf(!SERVER_AVAILABLE)('seam test: fixed model output, real verifier + gate', () => {
   it('real MCP ENOENT -> verifier fail -> gate abort cites verifier', async () => {
     // 1. Real verifier through the real dispatcher.
     const dispatcher = new VerifierDispatcher({
-      adapters: { filesystem: new FilesystemMcpVerifier(mcp) },
+      adapters: { filesystem: new FilesystemMcpVerifier(mcp!) },
     })
     const verificationClaim: VerificationClaim = {
       claimId: 'seam-1',
