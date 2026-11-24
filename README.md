@@ -255,6 +255,34 @@ It never evaluates claims, records evidence, or triggers retries, so it is safe
 to call at any point — including as the first step when a turn aborts. The tool
 is registered by the plugin entry (`entry/index.ts`) and requires no terminal.
 
+## Log verbosity (`FALSE_COMPLETION_DEBUG`)
+
+Per-turn trace lines are **silent by default**. The gate prints them only when
+`FALSE_COMPLETION_DEBUG` is truthy:
+
+| Line | Default | `FALSE_COMPLETION_DEBUG=1` |
+|---|---|---|
+| `agent/created received` | — | printed |
+| `turn-stopping fired turn=N` | — | printed |
+| `parsed claim output status=...` | — | printed |
+| `tool/result isError=... text=...` | — | printed |
+
+Strict truthiness: unset, empty, `0`, `false`, `no`, `off` all mean OFF, so a
+typo cannot silently re-enable the flood.
+
+**Never gated** — these stay loud with debugging off, because they explain why a
+turn was blocked:
+
+- `[false-completion-gate] abort category=...` (the audit trail, `formatAbortLine`)
+- `[false-completion-gate] SUSPENDED <ticket> session=<id>: ...`
+- `exporter_failed` aborts (infrastructure, not diagnostics)
+- abort-log write failures
+- startup lines: the verifier probe, `limits ...`, and `OTLP endpoint = ...`
+
+A normal chat turn therefore prints **nothing** from the gate; only a real abort
+or a misconfiguration does. `node scripts/log-noise-demo.mjs` prints the
+four-quadrant matrix (normal/abort × debug off/on) to confirm this locally.
+
 ## Durable abort log (daemon mode)
 
 `DSH_ABORT_LOG` optionally points to a file that receives **one append-only line
