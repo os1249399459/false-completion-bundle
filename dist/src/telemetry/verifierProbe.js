@@ -1,7 +1,6 @@
 const FIXES = {
     python: 'see README (Python setup section)',
     playwright: 'run `npx playwright install chromium` to enable',
-    github: 'set GITHUB_TOKEN to enable',
     filesystem: 'pre-install locally or allow network access',
 };
 export function probeVerifiers(env = {}) {
@@ -30,15 +29,6 @@ export function probeVerifiers(env = {}) {
             reason: env.npxPlaywrightOk === false
                 ? `${env.npxFailures?.playwright ?? 'npx playwright unavailable'}`
                 : hasBrowser || !pwEnabled ? 'not enabled' : 'browser binary not found',
-        });
-    results.push(env.githubToken && env.npxGithubOk !== false
-        ? { name: 'github', state: 'OK' }
-        : {
-            name: 'github',
-            state: 'SKIP',
-            reason: env.npxGithubOk === false
-                ? `${env.npxFailures?.github ?? 'npx github unavailable'}`
-                : 'GITHUB_TOKEN not set',
         });
     const lines = ['[false-completion-bundle] verifier probe:'];
     for (const result of results) {

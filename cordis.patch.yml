@@ -52,17 +52,3 @@
         command: /home/hex636869/dsh/bundle/.venv/bin/python
         args: ['/home/hex636869/dsh/bundle/python/mcp_verifier/server.py']
         failOnStartupError: false
-
-    # GitHub MCP — DISABLED WITH REASON: it requires a GitHub token which is not
-    # present in this environment. Enabling it without credentials makes the
-    # client fail/reconnect continuously, which is worse than leaving it off.
-    - id: false-completion-github-mcp
-      description: 'CI verifier: verifies commits and merges via GitHub status.'
-      name: '@deepseek-ai/dsh-mcp-client'
-      disabled: true
-      config:
-        serverName: false-completion-github
-        transport: stdio
-        command: npx
-        args: ['-y', '@modelcontextprotocol/server-github']
-        failOnStartupError: false

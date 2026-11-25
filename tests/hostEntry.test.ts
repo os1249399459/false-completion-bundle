@@ -71,34 +71,34 @@ describe('host entry: package.json is resolvable by name', () => {
   })
 })
 
-describe('github verifier: pinned to a version that exists', () => {
-  const GITHUB_SPEC = /@modelcontextprotocol\/server-github@([0-9][^'"\s,]*)/g
-
-  it('never pins the non-existent 1.0.0', () => {
+describe('github MCP row: removed, not merely reconfigured', () => {
+  // 0.1.9 removed the row outright. It registered 26 tools (12 of them write
+  // operations: create_or_update_file, push_files, merge_pull_request, ...) with
+  // NO verifier implementation consuming it, and the upstream server cannot be
+  // restricted (no --tools / GITHUB_TOOLSETS / read-only mode; verified
+  // empirically — all 26 tools are returned even with every flag set). It was a
+  // pure capability exposure, so it must not come back in any form.
+  it('no profile or patch file mentions the github row or server', () => {
     for (const file of PATCH_FILES) {
-      expect(read(file), `${file} pins the E404 version`).not.toMatch(/server-github@1\.0\.0/)
+      const text = read(file)
+      expect(text, `${file} still references the github row`).not.toMatch(/false-completion-github/)
+      expect(text, `${file} still pins the github MCP server`).not.toMatch(/server-github@/)
     }
   })
 
-  it('pins an exact published-looking version (YYYY.M.D or x.y.z)', () => {
-    let checked = 0
+  it('the github credential variable is gone from the config layer', () => {
+    // The row also read the wrong variable: the server only honours
+    // GITHUB_PERSONAL_ACCESS_TOKEN, never GITHUB_TOKEN.
     for (const file of PATCH_FILES) {
-      for (const match of read(file).matchAll(GITHUB_SPEC)) {
-        checked += 1
-        // Both the calendar scheme (2025.4.8) and semver are exact pins; a range
-        // or a dist-tag would drift under us.
-        expect(match[1], `${file}: ${match[0]}`).toMatch(/^\d+\.\d+\.\d+$/)
-      }
+      expect(read(file), `${file} still wires a github token`).not.toMatch(/GITHUB_TOKEN|GITHUB_PERSONAL_ACCESS_TOKEN/)
     }
-    expect(checked, 'no github verifier pin found — test is not looking at anything').toBeGreaterThan(0)
   })
 
-  it('the github row stays optional and token-gated', () => {
-    // Disabled unless GITHUB_TOKEN is present, so a missing/upstream-archived
-    // server never breaks a profile that does not use it.
-    const minimal = read('profiles/minimal.yml')
-    const chunk = minimal.split('- id: false-completion-github-mcp')[1]?.split('- id: ')[0] ?? ''
-    expect(chunk).toContain('process.env.GITHUB_TOKEN')
-    expect(chunk).toContain('failOnStartupError: false')
+  it('the probe and status tool no longer advertise a github verifier', () => {
+    const probe = read('src/telemetry/verifierProbe.ts')
+    expect(probe).not.toMatch(/github/i)
+    const status = read('src/gate/gateStatus.ts')
+    expect(status).not.toMatch(/github/i)
   })
 })
+

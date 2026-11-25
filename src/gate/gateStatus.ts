@@ -53,7 +53,6 @@ export function resolveAbortLogPath(env: NodeJS.ProcessEnv = process.env): strin
 function activeVerifiers(env: NodeJS.ProcessEnv): string[] {
   const active = ['filesystem']
   if (env['DSH_FALSE_COMPLETION_PLAYWRIGHT'] === '1') active.push('playwright')
-  if (env['GITHUB_TOKEN']) active.push('github')
   const backend = env['VERIFIER_BACKEND'] ?? ''
   if (['ragas', 'trulens', 'deepeval'].includes(backend)) active.push('python')
   return active

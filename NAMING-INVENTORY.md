@@ -33,11 +33,11 @@ Row ids are patch keys; `serverName` values become MCP tool names
 | `false-completion-gate` | plugin-row | `profiles/minimal.yml:8`, `profiles/standard.yml:9`, `profiles/strict-best-effort.yml:6`, `cordis.patch.yml:10`, `gate.patch.yml:12`; `README.md`; `AUDIT.md`; `tests/packaging.test.ts` | **YES** — patch id | Mounts the gate plugin entry |
 | `false-completion-filesystem-mcp` | plugin-row | `profiles/minimal.yml:12`, `profiles/standard.yml:12`, `profiles/strict-best-effort.yml:9`, `cordis.patch.yml:16`; `README.md`; `AUDIT.md` | **YES** — patch id | Filesystem MCP client row |
 | `false-completion-playwright-mcp` | plugin-row | `profiles/minimal.yml:27`, `profiles/standard.yml:26`, `profiles/strict-best-effort.yml:25`, `cordis.patch.yml:28` | **YES** — patch id | Playwright MCP client row |
-| `false-completion-github-mcp` | plugin-row | `profiles/minimal.yml:38`, `profiles/standard.yml:50`, `profiles/strict-best-effort.yml:49`, `cordis.patch.yml:55` | **YES** — patch id | GitHub MCP client row (always disabled here) |
+| ~~`false-completion-github-mcp`~~ | plugin-row | *removed 0.1.9* | no | GitHub MCP client row — deleted: 26 tools (12 write) with no verifier implementation |
 | `false-completion-python-mcp` | plugin-row | `profiles/minimal.yml:52`, `profiles/standard.yml:38`, `profiles/strict-best-effort.yml:36`, `cordis.patch.yml:43`; `ASSUMPTIONS.md:158` | **YES** — patch id | Python grounding MCP client row |
 | `false-completion-filesystem` | plugin-row (`serverName`) | `profiles/minimal.yml:15`, `profiles/standard.yml:15`, `profiles/strict-best-effort.yml:12`, `cordis.patch.yml:19`; tool name in `AUDIT.md:154`, `ASSUMPTIONS.md:189` | **YES** — becomes `mcp__false-completion-filesystem__*` | MCP server namespace |
 | `false-completion-playwright` | plugin-row (`serverName`) | `profiles/minimal.yml:31`, `profiles/standard.yml:30`, `profiles/strict-best-effort.yml:29`, `cordis.patch.yml:31` | **YES** — tool namespace | MCP server namespace |
-| `false-completion-github` | plugin-row (`serverName`) | `profiles/minimal.yml:42`, `profiles/standard.yml:54`, `profiles/strict-best-effort.yml:53`, `cordis.patch.yml:59` | **YES** — tool namespace | MCP server namespace |
+| ~~`false-completion-github`~~ | plugin-row (`serverName`) | *removed 0.1.9* | no | MCP server namespace — deleted with its row |
 | `false-completion-python` | plugin-row (`serverName`) | `profiles/minimal.yml:56`, `profiles/standard.yml:42`, `profiles/strict-best-effort.yml:40`, `cordis.patch.yml:46`; `ASSUMPTIONS.md:158,222` | **YES** — becomes `mcp__false-completion-python__verify_claim` | MCP server namespace |
 | `false-completion-ledger` / `false-completion-suspend` / `false-completion-verifier` | plugin-row (reference-only) | `gate.patch.yml:6,19`, `verifier.patch.yml:27` — **never loaded by any profile** | NO (non-live snippets) | Historical reference rows |
 | `dsh-false-completion-plugin` | plugin-row/config (OTel `serviceName`) | `gate.patch.yml:9`; `src/adapters/ledgerAdapter.ts:166`; `src/telemetry/otelExporter.ts:158` | **PARTIAL** — appears as OTel `service.name`; also `OTEL_SERVICE_NAME` override | Service name reported to the trace backend |
@@ -98,7 +98,7 @@ Row ids are patch keys; `serverName` values become MCP tool names
 | `FALSE_COMPLETION_MAX_RETRIES` | env-var | `entry/index.ts`; `ASSUMPTIONS.md`; `README.md`; `POSTMORTEM.md` | **YES** — real config input | Retry budget |
 | `AUDIT_REDACT_KEYS` | env-var | `src/adapters/ledgerAdapter.ts`; `README.md` | **YES** | Extra redaction keys |
 | `VERIFIER_BACKEND` | env-var | `entry/index.ts`; profiles; `verifier.patch.yml`; `python/mcp_verifier/test_server.py`; `README.md` | **YES** — Python verifier contract | Selects ragas/trulens/deepeval |
-| `GITHUB_TOKEN` | env-var | `entry/index.ts`; profiles (guards/env); `tests/packaging.test.ts`; `ASSUMPTIONS.md` | **YES** | GitHub MCP credential |
+| ~~`GITHUB_TOKEN`~~ | env-var | *removed 0.1.9* | no | Was never the variable the server reads (`GITHUB_PERSONAL_ACCESS_TOKEN` is) |
 | `OTEL_SERVICE_NAME` | env-var | `src/telemetry/otelExporter.ts`; `ASSUMPTIONS.md`; `README.md` | **YES** — standard OTel | Overrides service.name |
 
 ## 7. Trace attributes / span names
@@ -129,7 +129,7 @@ Row ids are patch keys; `serverName` values become MCP tool names
 ### 9a. Technical-only names exposed to users
 
 - `claimGuard` — appears in the user-visible probe line `active gate: claimGuard + filesystem` (`src/telemetry/verifierProbe.ts:103`, `README.md`). Users see an internal module name.
-- `filesystem` / `python` / `playwright` / `github` — probe labels are verifier category names, not the `false-completion-*` row names; the mapping is implicit (`src/telemetry/verifierProbe.ts`).
+- `filesystem` / `python` / `playwright` — probe labels are verifier category names, not the `false-completion-*` row names; the mapping is implicit (`src/telemetry/verifierProbe.ts`).
 - `OTelEvidenceExporter`, `BasicTracerProvider`, `SimpleSpanProcessor` — only in `README.md`/source, but surfaced by error strings like `EvidenceExportError: OTLP evidence export failed` (`src/telemetry/otelExporter.ts`).
 - `tool.call.evidence` — a span name users grep in traces; reads like an API identifier.
 
@@ -145,7 +145,7 @@ Row ids are patch keys; `serverName` values become MCP tool names
 ### 9c. Do-not-rename list (stable external contracts)
 
 1. **Trace attributes** — `tool.call.evidence`, `evidence.ref`, `evidence.profile`, `evidence.session.id`, `evidence.repeated`, `evidence.snapshot`, `evidence.args.hash`, `evidence.result.hash`, `evidence.exit_code`, `evidence.timestamp`, `evidence.error.name`, `evidence.error.code`, `evidence.redacted_fields`. Consumed by `tests/otelTraceShape.test.ts`, `tests/ledgerAdapter.test.ts`, `tests/repetitionGuard.test.ts`, and the two captured fixtures. Renaming breaks tests and invalidates stored traces.
-2. **Env vars** — `DSH_ABORT_LOG`, `DSH_REPEATED_TOOL_CALLS_JSON`, `DSH_DIVERGED_TURNS_JSON`, `DSH_FALSE_COMPLETION_PLAYWRIGHT`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `VERIFIER_BACKEND`, `GITHUB_TOKEN`, `AUDIT_REDACT_KEYS`, `OTEL_SERVICE_NAME`, `FALSE_COMPLETION_MAX_RETRIES`. Read by the launcher, metrics script, profile `!!js` guards, and Python server; user environments already set some.
+2. **Env vars** — `DSH_ABORT_LOG`, `DSH_REPEATED_TOOL_CALLS_JSON`, `DSH_DIVERGED_TURNS_JSON`, `DSH_FALSE_COMPLETION_PLAYWRIGHT`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `VERIFIER_BACKEND`, `AUDIT_REDACT_KEYS`, `OTEL_SERVICE_NAME`, `FALSE_COMPLETION_MAX_RETRIES`. Read by the launcher, metrics script, profile `!!js` guards, and Python server; user environments already set some.
 3. **Plugin row ids and `serverName` values** — `false-completion-gate`, `false-completion-{filesystem,playwright,github,python}-mcp`, and `serverName: false-completion-{filesystem,playwright,github,python}`. Row ids are patch targets; `serverName` becomes `mcp__<serverName>__<tool>`, which the model and docs already reference (`ASSUMPTIONS.md:158,189,222`, `AUDIT.md:154`).
 4. **Log grep contract** — `[false-completion-gate]`, `category=`, `claim=`, `evidence=`, `verifier=`, `counts=`, `detail=`. Documented as grep targets in `README.md` and `TRIAGE.md`; `tests/abortReason.test.ts` asserts the exact prefix and field order.
 5. **`dsh.bundle.patch` value** — `./profiles/minimal.yml`; asserted by `tests/packaging.test.ts` and used by `scripts/portability-smoke.sh`.

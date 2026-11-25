@@ -1,3 +1,16 @@
+// HARD RULE: Abort reasons and log lines MUST be raw English. Do not translate.
+//
+// The user-facing conversation may be in any language (the GUI often is), but
+// everything this module emits is machine tooling output: it gets grep'd,
+// counted and parsed. Translating it costs tokens, breaks greps, and makes log
+// lines unstable across turns. `detail`, `category` and every other field the
+// gate authors itself are English-only and ASCII-only. Model-authored text that
+// is echoed through (`claim_text`) is quoted verbatim, and is the one place a
+// non-ASCII character can legitimately appear.
+//
+// Enforced by tests/shared_invariants.test.ts (invariant I3). That suite must be
+// mirrored in the sibling repo `no-receipts`; see HANDOFF.md
+// "Cross-Repo Sync Discipline".
 export const ABORT_CATEGORIES = [
     'claim_invalid',
     'evidence_missing',

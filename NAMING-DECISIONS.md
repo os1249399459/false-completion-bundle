@@ -37,8 +37,8 @@ Migration cost: docs-only. References: `README.md:1`, prose in `AUDIT.md`,
 |---|---|---|---|---|---|
 | Product display | `False-completion plugin bundle` | `false-completion-bundle` | Match frozen package name; single grep token | `README.md:1`, prose in `AUDIT.md`, `POSTMORTEM.md`, `TRIAGE.md` | none (docs only) |
 | Package name | `false-completion-bundle` | **keep** | Frozen: installed into DSH profiles | — | — |
-| Plugin row ids | `false-completion-{gate,filesystem-mcp,playwright-mcp,github-mcp,python-mcp}` | **keep** | Frozen: patch ids | — | — |
-| `serverName` / `mcp__` tool names | `false-completion-{filesystem,playwright,github,python}` | **keep** | Frozen: becomes `mcp__<serverName>__<tool>`, referenced in docs | — | — |
+| Plugin row ids | `false-completion-{gate,filesystem-mcp,playwright-mcp,python-mcp}` | **keep** | Frozen: patch ids. `github-mcp` removed in 0.1.9 (unused write-capable row) | — | — |
+| `serverName` / `mcp__` tool names | `false-completion-{filesystem,playwright,python}` | **keep** | Frozen: becomes `mcp__<serverName>__<tool>`, referenced in docs. `github` removed in 0.1.9 | — | — |
 | OTel `serviceName` default | `dsh-false-completion-plugin` | **keep** | Frozen: appears in exported spans; renaming splits backend trace history | — | — |
 | Gate log prefix | `[false-completion-gate]` | **keep** | Frozen grep contract; asserted by `tests/abortReason.test.ts` | — | — |
 | Probe log prefix | `[false-completion-bundle]` | **keep** | Not frozen, but already equals the package name — renaming buys nothing and would break `AUDIT.md` greps | — | none (no change) |
@@ -83,13 +83,13 @@ same contents as the inventory; nothing added, nothing omitted.
    and invalidates stored traces.
 2. **Env vars** — `DSH_ABORT_LOG`, `DSH_REPEATED_TOOL_CALLS_JSON`,
    `DSH_DIVERGED_TURNS_JSON`, `DSH_FALSE_COMPLETION_PLAYWRIGHT`,
-   `OTEL_EXPORTER_OTLP_ENDPOINT`, `VERIFIER_BACKEND`, `GITHUB_TOKEN`,
+   `OTEL_EXPORTER_OTLP_ENDPOINT`, `VERIFIER_BACKEND`,
    `AUDIT_REDACT_KEYS`, `OTEL_SERVICE_NAME`, `FALSE_COMPLETION_MAX_RETRIES`.
    Why: read by the launcher, `scripts/metrics.mjs`, profile `!!js` guards and
    `python/mcp_verifier/server.py`; users already set some.
 3. **Plugin row ids and `serverName` values** — `false-completion-gate`,
-   `false-completion-{filesystem,playwright,github,python}-mcp`, and
-   `serverName: false-completion-{filesystem,playwright,github,python}`.
+   `false-completion-{filesystem,playwright,python}-mcp`, and
+   `serverName: false-completion-{filesystem,playwright,python}`.
    Why: row ids are patch targets; `serverName` becomes `mcp__<serverName>__<tool>`
    and is cited in `ASSUMPTIONS.md:158,189,222` and `AUDIT.md:154`.
 4. **Log grep contract** — `[false-completion-gate]`, `category=`, `claim=`,

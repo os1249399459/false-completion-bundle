@@ -8,7 +8,7 @@
  * No verifier, gate, claimGuard or exporter logic is involved here.
  */
 export interface ProbeResult {
-  readonly name: 'filesystem' | 'python' | 'playwright' | 'github'
+  readonly name: 'filesystem' | 'python' | 'playwright'
   readonly state: 'OK' | 'SKIP'
   readonly reason?: string
 }
@@ -23,13 +23,11 @@ export interface ProbeEnv {
   readonly cwd?: string
   readonly playwrightEnabled?: boolean
   readonly verifierBackend?: string
-  readonly githubToken?: string
   readonly hasBrowser?: boolean
   readonly hasFilesystemServer?: boolean
   /** Which npx packages are resolvable (checked by the caller). */
   readonly npxFilesystemOk?: boolean
   readonly npxPlaywrightOk?: boolean
-  readonly npxGithubOk?: boolean
   /** Exact commands that failed, for SKIP lines. */
   readonly npxFailures?: Readonly<Record<string, string>>
 }
@@ -37,7 +35,6 @@ export interface ProbeEnv {
 const FIXES: Record<string, string> = {
   python: 'see README (Python setup section)',
   playwright: 'run `npx playwright install chromium` to enable',
-  github: 'set GITHUB_TOKEN to enable',
   filesystem: 'pre-install locally or allow network access',
 }
 
@@ -75,18 +72,6 @@ export function probeVerifiers(env: ProbeEnv = {}): ProbeReport {
           reason: env.npxPlaywrightOk === false
             ? `${env.npxFailures?.playwright ?? 'npx playwright unavailable'}`
             : hasBrowser || !pwEnabled ? 'not enabled' : 'browser binary not found',
-        },
-  )
-
-  results.push(
-    env.githubToken && env.npxGithubOk !== false
-      ? { name: 'github', state: 'OK' }
-      : {
-          name: 'github',
-          state: 'SKIP',
-          reason: env.npxGithubOk === false
-            ? `${env.npxFailures?.github ?? 'npx github unavailable'}`
-            : 'GITHUB_TOKEN not set',
         },
   )
 

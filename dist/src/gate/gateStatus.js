@@ -22,8 +22,6 @@ function activeVerifiers(env) {
     const active = ['filesystem'];
     if (env['DSH_FALSE_COMPLETION_PLAYWRIGHT'] === '1')
         active.push('playwright');
-    if (env['GITHUB_TOKEN'])
-        active.push('github');
     const backend = env['VERIFIER_BACKEND'] ?? '';
     if (['ragas', 'trulens', 'deepeval'].includes(backend))
         active.push('python');

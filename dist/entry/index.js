@@ -61,7 +61,6 @@ export function apply(ctx) {
         cwd: process.cwd(),
         playwrightEnabled: process.env['DSH_FALSE_COMPLETION_PLAYWRIGHT'] === '1',
         verifierBackend: process.env['VERIFIER_BACKEND'],
-        githubToken: process.env['GITHUB_TOKEN'],
     }));
     // Read-only status tool: exposes effective config + today's abort log tail.
     // It never evaluates claims or triggers retries.

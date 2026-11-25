@@ -16,8 +16,22 @@ Every row below maps to a real file or a real config row.
 | `false-completion-filesystem-mcp` | `@deepseek-ai/dsh-mcp-client` row for `@modelcontextprotocol/server-filesystem@1.0.0`; deterministic file existence/hash checks. |
 | `false-completion-playwright-mcp` | MCP client for `@playwright/mcp@0.0.86`; disabled unless `DSH_FALSE_COMPLETION_PLAYWRIGHT=1`. |
 | `false-completion-python-mcp` | MCP client for `python/mcp_verifier/server.py` (FastMCP); disabled in minimal, mandatory in standard/strict-best-effort. |
-| `false-completion-github-mcp` | MCP client for GitHub server; always disabled here (no token). |
-| `cordis.patch.yml` | Authoritative reference patch (all five rows), kept for manual/`--patch` use; default install uses `profiles/minimal.yml`. |
+| `cordis.patch.yml` | Authoritative reference patch (all four rows), kept for manual/`--patch` use; default install uses `profiles/minimal.yml`. |
+
+**Removed in 0.1.9 — `false-completion-github-mcp`.** This row was an
+over-designed placeholder: no verifier implementation ever consumed it
+(`grep` over `src/` had zero readers), so it contributed no verification
+capability while registering **26 MCP tools, 12 of them write operations**
+(`create_or_update_file`, `push_files`, `create_repository`,
+`merge_pull_request`, `create_pull_request_review`, ...). It also read the
+wrong credential variable — the upstream server honours only
+`GITHUB_PERSONAL_ACCESS_TOKEN`, never `GITHUB_TOKEN` — so it could not have
+authenticated even when enabled. The upstream server offers **no** way to
+restrict its tool list (no `--tools` flag, no `GITHUB_TOOLSETS`, no
+read-only mode; verified empirically — all 26 tools are still returned with
+every candidate flag and env var set). Removing the row was the only
+fix that eliminated the exposure. A future GitHub verifier must be written
+against a wrapper that filters `tools/list`, not against this server directly.
 | `gate.patch.yml`, `verifier.patch.yml` | Historical reference snippets; NOT loaded by any profile. |
 
 ### Source adapters / core

@@ -95,7 +95,6 @@ file has the right contents."* Verifiers add that second opinion.
 | **filesystem** | file exists; content hash matches | **on** |
 | **python** (grounding) | claim text supported by evidence text | off (needs a backend) |
 | **playwright** | page element / text / browser state | off (needs a browser) |
-| **github** | commit/merge status | off (needs a token) |
 
 At startup the plugin prints which ones are live and how to fix the others:
 
@@ -104,7 +103,6 @@ At startup the plugin prints which ones are live and how to fix the others:
   filesystem  OK
   python      SKIP (no deterministic backend configured; see README (Python setup section))
   playwright  SKIP (not enabled; run `npx playwright install chromium` to enable)
-  github      SKIP (GITHUB_TOKEN not set; set GITHUB_TOKEN to enable)
 [false-completion-bundle] active gate: claimGuard + filesystem
 ```
 

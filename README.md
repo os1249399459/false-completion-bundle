@@ -2,7 +2,7 @@
 
 1. `dsh plugin --profile work add false-completion-bundle`
 2. `dsh run --profile work`
-3. Optional: `npx playwright install chromium`; `export GITHUB_TOKEN=...`; [Python setup](#python)
+3. Optional: `npx playwright install chromium`; [Python setup](#python)
 4. `pnpm run metrics`
 
 That is the whole quick start. The default profile activates the gate and the
@@ -27,25 +27,25 @@ in this repository:
 |---|---|---|
 | `@modelcontextprotocol/server-filesystem` | `1.0.0` | verified in real DSH turns (ENOENT + success paths) |
 | `@playwright/mcp` | `0.0.86` | present in the local npx cache; browser binary still required |
-| `@modelcontextprotocol/server-github` | `2025.4.8` | installs and starts (`GitHub MCP Server running on stdio`); upstream is archived, so pin stays exact |
 
 To pre-install for an offline/production deployment:
 
 ```bash
 npx -y -p @modelcontextprotocol/server-filesystem@1.0.0 -c true
 npx -y -p @playwright/mcp@0.0.86 -c true
-npx -y -p @modelcontextprotocol/server-github@2025.4.8 -c true
 export npm_config_offline=true   # fail instead of fetching during runs
 ```
 
-`tests/packaging.test.ts` fails if any profile reintroduces an unpinned spec, and
-`tests/hostEntry.test.ts` fails if the GitHub pin returns to the previously
-documented-but-nonexistent `1.0.0` (npm E404 — that row could never start).
+`tests/packaging.test.ts` fails if any profile reintroduces an unpinned spec.
 
-Note on `server-github`: it is **archived and unmaintained** upstream
-(`modelcontextprotocol/servers-archived`). It still installs and runs from npm,
-but it carries no security guarantees. The row is disabled unless
-`GITHUB_TOKEN` is set, so it costs nothing to profiles that do not use it.
+**The GitHub MCP row was removed in 0.1.9.** It exposed 26 tools (12 of them
+write operations) with no verifier implementation behind it, read the wrong
+credential variable (`GITHUB_TOKEN`; the server honours only
+`GITHUB_PERSONAL_ACCESS_TOKEN`), and could not be restricted — the upstream server
+has no `--tools` flag, no toolset selection and no read-only mode, so every tool
+was registered unconditionally. A gate that certifies completion has no business
+carrying unused write capability. `tests/hostEntry.test.ts` now fails if the row
+or either credential variable reappears. See `AUDIT.md` for the full record.
 
 ## Python setup {#python}
 
@@ -65,7 +65,6 @@ SKIP fixes printed at startup, one line each:
 
 - `python SKIP (no deterministic backend configured)` → follow [Python setup](#python) and set `VERIFIER_BACKEND`.
 - `playwright SKIP (browser binary not found)` → `npx playwright install chromium` and set `DSH_FALSE_COMPLETION_PLAYWRIGHT=1`.
-- `github SKIP (GITHUB_TOKEN not set)` → `export GITHUB_TOKEN=...`.
 
 ## Profiles and strict mode (below the fold)
 

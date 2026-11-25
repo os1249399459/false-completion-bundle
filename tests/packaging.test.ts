@@ -100,31 +100,33 @@ describe('probe: npx failure becomes SKIP with a fix', () => {
 })
 
 describe('probe output format', () => {
-  it('prints one block with four verifiers and an active-gate line', () => {
+  it('prints one block with three verifiers and an active-gate line', () => {
+    // The github probe was removed in 0.1.9: the row exposed 26 tools (12
+    // write) with no verifier implementation behind it.
     const report = probeVerifiers({
       verifierBackend: '',
-      githubToken: undefined,
       playwrightEnabled: false,
       hasBrowser: false,
     })
-    expect(report.lines).toHaveLength(6)
+    expect(report.lines).toHaveLength(5)
     expect(report.lines[0]).toBe('[false-completion-bundle] verifier probe:')
     expect(report.lines[1]).toMatch(/filesystem\s+OK/)
     expect(report.lines[2]).toMatch(/python\s+SKIP.*deterministic backend/)
     expect(report.lines[2]).toContain('Python setup section')
     expect(report.lines[3]).toContain('playwright')
-    expect(report.lines[4]).toContain('GITHUB_TOKEN not set')
-    expect(report.lines[5]).toBe('[false-completion-bundle] active gate: claimGuard + filesystem')
+    expect(report.lines[4]).toBe('[false-completion-bundle] active gate: claimGuard + filesystem')
     expect(report.active).toEqual(['filesystem'])
+    // No github line survives.
+    expect(report.lines.join('\n')).not.toContain('github')
+    expect(report.lines.join('\n')).not.toContain('GITHUB_TOKEN')
   })
 
   it('every SKIP line maps to a one-line fix in README', () => {
     const readme = read('README.md')
-    const report = probeVerifiers({ verifierBackend: '', githubToken: undefined, playwrightEnabled: false })
+    const report = probeVerifiers({ verifierBackend: '', playwrightEnabled: false })
     for (const line of report.lines.filter((l) => l.includes('SKIP'))) {
       if (line.includes('Python setup')) expect(readme).toContain('## Python setup')
       if (line.includes('playwright')) expect(readme).toContain('npx playwright install chromium')
-      if (line.includes('GITHUB_TOKEN')) expect(readme).toContain('GITHUB_TOKEN')
     }
   })
 })

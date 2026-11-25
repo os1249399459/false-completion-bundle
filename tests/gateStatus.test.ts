@@ -28,7 +28,6 @@ describe('gate status: config', () => {
   it('derives active verifiers from env gating flags', () => {
     expect(buildGateStatus({ env: {} }).effective.activeVerifiers).toEqual(['filesystem'])
     expect(buildGateStatus({ env: { DSH_FALSE_COMPLETION_PLAYWRIGHT: '1' } }).effective.activeVerifiers).toContain('playwright')
-    expect(buildGateStatus({ env: { GITHUB_TOKEN: 't' } }).effective.activeVerifiers).toContain('github')
     expect(buildGateStatus({ env: { VERIFIER_BACKEND: 'ragas' } }).effective.activeVerifiers).toContain('python')
     expect(buildGateStatus({ env: { VERIFIER_BACKEND: 'none' } }).effective.activeVerifiers).not.toContain('python')
   })
