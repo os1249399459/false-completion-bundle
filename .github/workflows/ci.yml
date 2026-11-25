@@ -1,0 +1,52 @@
+name: ci
+
+# Runs on every push to main and every PR against it, so a green release tag
+# can never be the first time the suite runs. Before this existed, the only
+# workflow was release.yml (tags only), and a locally-green suite reached CI
+# twice before its two non-hermetic tests were caught.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22 is the Node the DSH launcher pins; 24 is what release.yml publishes
+        # with. Both must stay green so a passing CI run cannot be invalidated
+        # by the release runner using different Node.
+        node: [22, 24]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+
+      # pnpm is the package manager declared in package.json `packageManager`.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+
+      - run: pnpm install --frozen-lockfile
+
+      # Build BEFORE test: parts of the suite read dist/.
+      - run: npm run build:bundle
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      # Tests must stay hermetic: no OTLP collector is started here on purpose.
+      # The gate is fail-closed, so if a test ever regresses to touching the real
+      # exporter, this job fails instead of silently depending on local infra.
+      #
+      # Deliberately ubuntu-only. The suite spawns a filesystem MCP server over
+      # stdio and relies on POSIX path behaviour; a Windows matrix entry would
+      # need separate work, not a config flag, so it is not claimed here.

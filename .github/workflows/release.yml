@@ -17,55 +17,46 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Node 22 ships npm 10.x, whose trusted-publishing support predates the
-      # feature (OIDC publish needs npm >= 11.5.1). Pin npm explicitly rather
-      # than assume the runner image happens to be new enough.
-      # NOTE: deliberately NO `registry-url`. setup-node writes a
-      # `${NODE_AUTH_TOKEN}` line into the runner's .npmrc when that input is
-      # set, and any token — even a placeholder — takes precedence over OIDC
-      # trusted publishing. The first run of this workflow did exactly that and
-      # failed with `E403 OIDC permission denied`: npm authenticated with the
-      # placeholder token instead of the minted OIDC credential.
+      # Node 24 ships a modern npm, and the trusted-publisher registration on
+      # npmjs.com grants this workflow `npm publish` + `npm stage publish`.
+      #
+      # `registry-url` IS REQUIRED. An earlier revision removed it on the theory
+      # that setup-node's `${NODE_AUTH_TOKEN}` placeholder would override OIDC.
+      # That was wrong: the placeholder does not override OIDC (the peer package
+      # no-receipts publishes successfully with it present), and without a
+      # registry entry in .npmrc npm has nowhere to exchange the OIDC token.
+      # Removing it produced `403 OIDC permission denied`.
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
 
+      # Staged publishing needs npm >= 11.15.0; the runner's bundled npm may be
+      # older, so pin it explicitly rather than hope.
       - run: npm install -g npm@^11.15.0
 
       # pnpm is the package manager declared in package.json `packageManager`.
-      # `--frozen-lockfile` keeps CI on the committed lockfile.
       - uses: pnpm/action-setup@v4
         with:
           version: 12.16.1
 
-      # The repo's pnpm-workspace.yaml points storeDir at an absolute local path
-      # from the development machine. That path does not exist on a runner, so
-      # give pnpm a runner-local store instead of failing on it.
-      - run: pnpm config set store-dir "$HOME/.pnpm-store" --location project
-
       - run: pnpm install --frozen-lockfile
 
-      # Build BEFORE test: the test suite includes files that read dist/, and a
-      # prepack hook runs typecheck+test anyway — building first also means a
-      # tag can never publish a stale dist.
+      # Build BEFORE test: parts of the suite read dist/, and building first
+      # means a tag can never publish a stale artifact.
       - run: npm run build:bundle
 
       - run: npm run typecheck
 
       - run: npm test
 
-      # Fail fast with a clear message if anything reintroduced token auth,
-      # instead of letting npm fall back to it and surface an opaque E403.
-      - name: Assert no token auth is configured
-        run: |
-          if [ -n "${NODE_AUTH_TOKEN:-}" ] || [ -n "${NPM_TOKEN:-}" ]; then
-            echo "::error::NODE_AUTH_TOKEN/NPM_TOKEN is set and overrides OIDC. Remove registry-url from setup-node."
-            exit 1
-          fi
-          echo "No token present — OIDC trusted publishing will be used."
-
-      # Trusted publishing: npm mints an OIDC credential from the
-      # `id-token: write` permission and exchanges it with the registry. No
-      # NODE_AUTH_TOKEN / NPM_TOKEN anywhere. `--provenance` requires the repo to
-      # be public (it is).
-      - run: npm publish --provenance --access public
+      # `stage publish`, not `publish`. The trusted publisher grants
+      # "npm stage publish": this uploads the tarball and stops. A maintainer
+      # then approves it in the npm UI with 2FA — that interactive step is the
+      # point of the restriction and cannot be automated away. `npm publish`
+      # here would request direct-publish permission the registration does not
+      # grant, which is what previously returned E403.
+      #
+      # No NODE_AUTH_TOKEN / NPM_TOKEN secrets: npm mints the OIDC credential
+      # from `id-token: write` and exchanges it with the registry.
+      - run: npm stage publish
