@@ -20,10 +20,15 @@ jobs:
       # Node 22 ships npm 10.x, whose trusted-publishing support predates the
       # feature (OIDC publish needs npm >= 11.5.1). Pin npm explicitly rather
       # than assume the runner image happens to be new enough.
+      # NOTE: deliberately NO `registry-url`. setup-node writes a
+      # `${NODE_AUTH_TOKEN}` line into the runner's .npmrc when that input is
+      # set, and any token — even a placeholder — takes precedence over OIDC
+      # trusted publishing. The first run of this workflow did exactly that and
+      # failed with `E403 OIDC permission denied`: npm authenticated with the
+      # placeholder token instead of the minted OIDC credential.
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
 
       - run: npm install -g npm@^11.15.0
 
@@ -49,7 +54,18 @@ jobs:
 
       - run: npm test
 
-      # Trusted publishing: no NODE_AUTH_TOKEN / NPM_TOKEN anywhere. A leftover
-      # token silently overrides OIDC and the run fails with ENEEDAUTH or a 404
-      # on PUT. `--provenance` requires the repo to be public (it is).
+      # Fail fast with a clear message if anything reintroduced token auth,
+      # instead of letting npm fall back to it and surface an opaque E403.
+      - name: Assert no token auth is configured
+        run: |
+          if [ -n "${NODE_AUTH_TOKEN:-}" ] || [ -n "${NPM_TOKEN:-}" ]; then
+            echo "::error::NODE_AUTH_TOKEN/NPM_TOKEN is set and overrides OIDC. Remove registry-url from setup-node."
+            exit 1
+          fi
+          echo "No token present — OIDC trusted publishing will be used."
+
+      # Trusted publishing: npm mints an OIDC credential from the
+      # `id-token: write` permission and exchanges it with the registry. No
+      # NODE_AUTH_TOKEN / NPM_TOKEN anywhere. `--provenance` requires the repo to
+      # be public (it is).
       - run: npm publish --provenance --access public
