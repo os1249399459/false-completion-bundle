@@ -17,6 +17,7 @@ Every row below maps to a real file or a real config row.
 | `false-completion-playwright-mcp` | MCP client for `@playwright/mcp@0.0.86`; disabled unless `DSH_FALSE_COMPLETION_PLAYWRIGHT=1`. |
 | `false-completion-python-mcp` | MCP client for `python/mcp_verifier/server.py` (FastMCP); disabled in minimal, mandatory in standard/strict-best-effort. |
 | `cordis.patch.yml` | Authoritative reference patch (all four rows), kept for manual/`--patch` use; default install uses `profiles/minimal.yml`. |
+| `gate.patch.yml`, `verifier.patch.yml` | Historical reference snippets; NOT loaded by any profile. |
 
 **Removed in 0.1.9 — `false-completion-github-mcp`.** This row was an
 over-designed placeholder: no verifier implementation ever consumed it
@@ -32,7 +33,12 @@ read-only mode; verified empirically — all 26 tools are still returned with
 every candidate flag and env var set). Removing the row was the only
 fix that eliminated the exposure. A future GitHub verifier must be written
 against a wrapper that filters `tools/list`, not against this server directly.
-| `gate.patch.yml`, `verifier.patch.yml` | Historical reference snippets; NOT loaded by any profile. |
+
+**Roadmap:** a strict read-only wrapper is planned for 0.2.0 — see
+`HANDOFF.md` §10 and this repo's issue *Implement a strict read-only GitHub MCP
+Wrapper (v0.2.0)*. It must filter `tools/list` down to `get_file_contents`,
+`list_commits` and `get_pull_request_status`, and read
+`GITHUB_PERSONAL_ACCESS_TOKEN`. Do not re-add the upstream server directly.
 
 ### Source adapters / core
 

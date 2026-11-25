@@ -26,24 +26,23 @@ survived the plugin installs below.
 | Item | Verified value |
 |---|---|
 | Profile dir | `~/.dsh/profiles/web/` |
-| Bundle | `false-completion-bundle` **0.1.5**, installed 2026-11-23 17:26 (see §7) |
+| Bundle | `false-completion-bundle` **0.1.9**, installed 2026-11-25 18:24. Published to npm this day with SLSA provenance (see §9) |
 | `dsh-memory-palace` | declared **1.8.6**, installed **1.8.6** (mtime 11-22 11:08) |
 | `dsh-workbuddy-connect-community` | declared **0.1.26**, installed **0.1.26** (mtime 11-22 11:08) |
 | WorkBuddy env | `WORKBUDDY_ELECTRON_BIN` must point at the Windows `WorkBuddy.exe`; set in `~/dsh/start_dsh.sh`. Changing it requires a host restart. Launcher entry is `start_dsh.bat` only. |
 
-**On `bundle/dist-pack/`**: the directory exists and contains exactly one file,
-`false-completion-bundle-0.1.0.tgz` (79082 bytes, 11-22 10:02). It is **not
-referenced by any file in the repo** (grep over `*.json|*.md|*.yml|*.sh` in
-`bundle/` returns nothing) — it is a packed-artifact staging directory, not a
-runtime fix. Do not assume it is load-bearing.
+**On `bundle/dist-pack/`**: a packed-artifact staging directory (gitignored), not
+load-bearing at runtime. It holds `false-completion-bundle-0.1.9.tgz`, which the
+`web` profile references by absolute path in its `package.json`. Older tarballs
+are deleted on each bump; only the current one is kept.
 
 ### `false-completion-bundle` status
 
 | Item | Verified |
 |---|---|
 | Gate | **active** — `inject: ['tools']`, bound on `agent/turn-stopping` |
-| `get_gate_status` | **registered and callable this session.** Baseline 2026-11-23 17:03: `maxRetries=1 steps=20 toolCalls=30 noProgress=3`, verifiers=filesystem, otel `http://localhost:4318 (default)` |
-| Tests | **116 passing / 18 files** (2026-11-23 17:16) |
+| `get_gate_status` | **registered and callable.** Live values as of 0.1.9: `maxRetries=1 steps=20 toolCalls=10 noProgress=3`, verifiers=filesystem, otel `http://localhost:4318 (default)`. The 10 tool-call cap comes from `FALSE_COMPLETION_MAX_TOOL_CALLS` exported by `start_dsh.sh`. |
+| Tests | **147 passing / 21 files** (2026-11-25 18:32) |
 | Typecheck | clean |
 | Abort log default | `~/.dsh/logs/aborts/web/$(date +%F).log`, set by `start_dsh.sh` **for the `web` profile only** |
 | OTLP sink (4318) | **UP** — `GET /` and `POST /v1/traces` both return 200 (rechecked 17:03) |
@@ -347,3 +346,105 @@ inside quotes.
 Enforcement is a plain non-ASCII regex — deliberately not an AST pass. If the
 gate's prose is ever translated (e.g. `(无证据)`), `I3` fails and names the
 offending character.
+
+---
+
+## 9. 2026-11-25 — 0.1.9 released; security cleanup closed
+
+### GitHub MCP row removed (0.1.9)
+
+The `false-completion-github-mcp` row was **deleted outright** in 0.1.9 after the
+maintainer of `dsh-plugin-index` flagged it during index review
+(`polang233/dsh-plugin-index#745`). It was worse than a misconfiguration:
+
+| Property | Reality |
+|---|---|
+| Verifier implementation | **None.** No github verifier in `src/verifier/`; `grep false-completion-github` over `src/`+`entry/` had zero readers |
+| Tools exposed | **26, of which 12 write** — `create_or_update_file`, `push_files`, `create_repository`, `merge_pull_request`, `create_pull_request_review`, `update_pull_request_branch`, … |
+| Credential variable | **Wrong.** The server honours only `GITHUB_PERSONAL_ACCESS_TOKEN`; the profile passed `GITHUB_TOKEN`, so it could never authenticate |
+| Tool restriction | **Impossible.** No `--tools` flag, no `GITHUB_TOOLSETS`, no read-only mode. All candidate flags/env vars set at once still returned all 26 tools |
+
+So it contributed no verification capability while handing the model write
+access to the repo the gate is supposed to police. Removal was the only fix that
+eliminated the exposure; a filtering wrapper was deliberately out of scope for a
+patch release.
+
+Remaining rows are all read-only or local: `filesystem`, `playwright`, `python`.
+`tests/hostEntry.test.ts` now fails if the row, the server pin, or either
+credential variable reappears.
+
+**Do not re-add `@modelcontextprotocol/server-github` directly.** See the 0.2.0
+roadmap below.
+
+### CI/CD via OIDC is fully functional
+
+0.1.9 was the first release published entirely by CI:
+
+- `release.yml` on tag `v*` → `npm stage publish` over OIDC trusted publishing
+  (`id-token: write`, no `NODE_AUTH_TOKEN`/`NPM_TOKEN` anywhere).
+- `registry-url` **must stay** in `setup-node`; removing it breaks the OIDC
+  exchange (that mistake produced `403 OIDC permission denied`).
+- The trusted publisher grants `npm publish` + `npm stage publish` only, so
+  `npm stage publish` is correct and `npm publish --provenance` is not.
+- A maintainer still approves the staged version with 2FA in the npm UI — that
+  interactive step is the point of the restriction and cannot be automated.
+- **0.1.9 carries SLSA provenance** (`slsa.dev/provenance/v1`, shasum
+  `09e5c592…`). Verified on the public registry.
+- `ci.yml` runs on every push/PR to `main` (Node 22 + 24); `scripts/check-contract.mjs`
+  runs first to catch a missing shared invariant before install.
+
+### Release history (npm)
+
+| Version | Note |
+|---|---|
+| 0.1.2 | last token-published (pre-CI) |
+| 0.1.8 | package-name entry + real GitHub pin; published via stage + UI approval |
+| **0.1.9** | **GitHub MCP row removed; first fully-CI release with provenance** |
+
+---
+
+## 10. Next Steps — roadmap for 0.2.0
+
+### Primary: strict read-only GitHub MCP wrapper
+
+Tracked as a GitHub issue in this repo:
+**`[Feature] Implement a strict read-only GitHub MCP Wrapper (v0.2.0)`**
+
+Because the upstream server cannot be restricted, the only safe way back to a
+GitHub verifier is a wrapper that proxies stdio to
+`@modelcontextprotocol/server-github` and filters `tools/list` down to a fixed
+allowlist:
+
+- `get_file_contents` — read a file/blob (content hashing for evidence)
+- `list_commits` — confirm a commit exists
+- `get_pull_request_status` — the actual CI/merge state check
+
+Everything else must be dropped **before** the list reaches the model, not merely
+"not called". Requirements for the implementation:
+
+1. Filter `tools/list` responses; never forward a write tool in the advertised
+   list. Fail closed: an unexpected/unknown tool is dropped, not passed through.
+2. Use `GITHUB_PERSONAL_ACCESS_TOKEN` (the variable the server actually reads).
+3. Keep it out of the default profiles until it has its own tests proving the
+   filtered list — a test that asserts the advertised set is exactly the
+   three-tool allowlist.
+4. No new runtime dependencies in the gate itself; the wrapper is a separate
+   executable, not part of `dist/entry`.
+
+### Secondary / candidate items
+
+- **Shared-invariant cross-repo diff.** `scripts/check-contract.mjs` asserts
+  presence only; it cannot detect divergent *content* between this repo and
+  `no-receipts`. A two-repo checkout job could diff the assertion text, at the
+  cost of coupling the two CIs.
+- **Branch protection** on `main` requiring the `ci` check, so a PR cannot merge
+  on a red suite.
+- **`~/dsh` is still not a git repo**, so anything outside `bundle/` (launcher
+  scripts, quant tree) is unversioned. If more tooling accumulates there, this
+  becomes worth fixing.
+
+### Deliberately not planned
+
+- Re-adding the GitHub row without the wrapper.
+- Merging this repo with `no-receipts` (separate implementations, shared
+  contract; see §8).
