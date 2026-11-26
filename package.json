@@ -23,7 +23,6 @@
   },
   "files": [
     "profiles/*.yml",
-    "cordis.patch.yml",
     "dist/**",
     "src/**",
     "entry/index.ts",

@@ -61,6 +61,36 @@ describe('packaging: pinned npx packages', () => {
     })
   }
 
+  it('the filesystem MCP pin matches the devDependency exactly (no test/prod drift)', () => {
+    // The read-only security test spawns the devDependency copy, while the
+    // profiles spawn whatever npx resolves at runtime. If those ever diverge,
+    // the suite would be validating a server that production never runs — and
+    // a regression in the tested version could ship unnoticed.
+    const pkg = JSON.parse(read('package.json')) as { devDependencies: Record<string, string> }
+    const devPin = pkg.devDependencies['@modelcontextprotocol/server-filesystem']
+    expect(devPin, 'devDependency must pin the filesystem MCP server').toBeDefined()
+    expect(devPin).toMatch(/^\d+\.\d+\.\d+$/)
+
+    for (const profile of ['minimal.yml', 'standard.yml', 'strict-best-effort.yml']) {
+      const text = read(`profiles/${profile}`)
+      const matches = [...text.matchAll(/@modelcontextprotocol\/server-filesystem@([0-9][^'"\s,]*)/g)]
+      expect(matches.length, `${profile} must pin the filesystem server`).toBeGreaterThan(0)
+      for (const match of matches) {
+        expect(match[1], `${profile} pins ${match[1]}, devDependency pins ${devPin}`).toBe(devPin)
+      }
+    }
+  })
+
+  it('every filesystem profile row runs --read-only', () => {
+    // Version parity alone is not enough: the flag is what bounds the tools.
+    for (const profile of ['minimal.yml', 'standard.yml', 'strict-best-effort.yml']) {
+      const text = read(`profiles/${profile}`)
+      const rows = text.split(/- id: false-completion-filesystem-mcp/)[1]?.split(/- id: /)[0] ?? ''
+      expect(rows, `${profile} filesystem row missing`).not.toBe('')
+      expect(rows, `${profile} does not pass --read-only`).toContain('--read-only')
+    }
+  })
+
   it('no profile is named strict.yml (semantics are not enforced)', () => {
     expect(() => read('profiles/strict.yml')).toThrow()
     const readme = read('README.md')

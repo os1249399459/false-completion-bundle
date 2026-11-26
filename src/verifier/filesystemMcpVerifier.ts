@@ -1,7 +1,7 @@
 /**
  * Filesystem MCP verifier — checks file existence and content hash using an
  * existing Filesystem MCP server. No custom filesystem MCP implementation.
- * The MCP client is injected; its server config lives in cordis.patch.yml.
+ * The MCP client is injected; its server config lives in the profile patch (profiles/minimal.yml).
  */
 import { createHash } from 'node:crypto'
 import type { JsonValue, VerificationClaim, Verdict, VerifierAdapter } from '../adapters/adapters.js'

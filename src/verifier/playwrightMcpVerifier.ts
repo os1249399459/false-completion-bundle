@@ -1,7 +1,7 @@
 /**
  * Playwright MCP verifier — asserts element/text/state through an existing
  * Playwright MCP server. No custom browser automation. The MCP client is
- * injected; its server config lives in cordis.patch.yml.
+ * injected; its server config lives in the profile patch.
  */
 import { createHash } from 'node:crypto'
 import type { JsonValue, VerificationClaim, Verdict, VerifierAdapter } from '../adapters/adapters.js'

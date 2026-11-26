@@ -21,7 +21,10 @@ const root = join(__dirname, '..')
 const read = (rel: string): string => readFileSync(join(root, rel), 'utf8')
 const pkg = JSON.parse(read('package.json'))
 
-const PATCH_FILES = ['profiles/minimal.yml', 'profiles/standard.yml', 'profiles/strict-best-effort.yml', 'cordis.patch.yml']
+// Only files DSH actually loads (dsh.bundle.patch -> profiles/minimal.yml).
+// A root-level cordis.patch.yml used to be listed here; it was never loaded and
+// duplicated rows when passed via --patch, so it was deleted in 0.2.0.
+const PATCH_FILES = ['profiles/minimal.yml', 'profiles/standard.yml', 'profiles/strict-best-effort.yml']
 
 describe('host entry: gate loads by package name', () => {
   for (const file of PATCH_FILES) {

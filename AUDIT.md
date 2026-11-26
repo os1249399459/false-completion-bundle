@@ -16,8 +16,18 @@ Every row below maps to a real file or a real config row.
 | `false-completion-filesystem-mcp` | `@deepseek-ai/dsh-mcp-client` row for `@modelcontextprotocol/server-filesystem@2.4.0` run with `--read-only`; deterministic file existence/hash checks. 1.0.0 was the previous pin and registered 14 tools including `write_file`/`move_file`; `--read-only` exists from upstream 2.2.0. |
 | `false-completion-playwright-mcp` | MCP client for `@playwright/mcp@0.0.86`; disabled unless `DSH_FALSE_COMPLETION_PLAYWRIGHT=1`. |
 | `false-completion-python-mcp` | MCP client for `python/mcp_verifier/server.py` (FastMCP); disabled in minimal, mandatory in standard/strict-best-effort. |
-| `cordis.patch.yml` | Authoritative reference patch (all four rows), kept for manual/`--patch` use; default install uses `profiles/minimal.yml`. |
 | `gate.patch.yml`, `verifier.patch.yml` | Historical reference snippets; NOT loaded by any profile. |
+
+**Deleted in 0.2.0 — root `cordis.patch.yml`.** It was never loaded: the only
+load path is `dsh.bundle.patch` in `package.json`, which points at
+`./profiles/minimal.yml` (confirmed empirically — the composed profile shows the
+`npx` + `$(pwd)` filesystem row from `minimal.yml`, never the `command: node`
+row this file carried). Its four rows were the same four rows as `minimal.yml`,
+with no unique content, and it had drifted: a machine-absolute playwright path
+(`~/.npm/_npx/86170c4cd1c5da32/...`) and python args pointing into a `.venv` that
+is not packaged. Passing it via `--patch` did not override anything either — it
+**duplicated** the rows, yielding two MCP clients with the same `serverName`.
+A never-loaded, drifted, duplicate-adding file is worse than no file.
 
 **Removed in 0.1.9 — `false-completion-github-mcp`.** This row was an
 over-designed placeholder: no verifier implementation ever consumed it

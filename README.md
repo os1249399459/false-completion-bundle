@@ -133,7 +133,7 @@ captured fixtures; see "Trace schema and local capture" below.
 | `filesystem` | `filesystemMcpVerifier.ts` | Calls an existing Filesystem MCP `readFile`. Missing file → fail. Optional `sha256` must match content hash. |
 | `playwright` | `playwrightMcpVerifier.ts` | Calls an existing Playwright MCP `assert` with `selector`/`text`/`state`/`url`. `ok: false` → fail. |
 
-MCP clients are injected. Declare the MCP servers in `cordis.patch.yml` (see `verifier.patch.yml`) — no custom MCP server or browser automation is bundled. LLM judge / free-form model verdicts are explicitly unsupported and always return `unknown`.
+MCP clients are injected. Declare the MCP servers in the profile patch (`profiles/minimal.yml`; see also `verifier.patch.yml`) — no custom MCP server or browser automation is bundled. LLM judge / free-form model verdicts are explicitly unsupported and always return `unknown`.
 
 ## Phase 4 — false-completion regression harness
 
@@ -164,11 +164,11 @@ python3 -m venv .venv
 .venv/bin/python python/mcp_verifier/server.py   # stdio MCP server
 ```
 
-Env vars: `VERIFIER_BACKEND` (`ragas|trulens|deepeval|none`), `VERIFIER_JUDGE_MODEL`, `VERIFIER_JUDGE_API_KEY`, `VERIFIER_DETERMINISTIC_THRESHOLD` (default 0.7), `VERIFIER_JUDGE_THRESHOLD`, `EVIDENCE_JSON` (map of evidence id → supporting text). The MCP client entry is declarative in `cordis.patch.yml`; the TS side only adds a thin adapter (`src/verifier/pythonMcpVerifier.ts`) that calls the tool and routes by `verification.type: python`.
+Env vars: `VERIFIER_BACKEND` (`ragas|trulens|deepeval|none`), `VERIFIER_JUDGE_MODEL`, `VERIFIER_JUDGE_API_KEY`, `VERIFIER_DETERMINISTIC_THRESHOLD` (default 0.7), `VERIFIER_JUDGE_THRESHOLD`, `EVIDENCE_JSON` (map of evidence id → supporting text). The MCP client entry is declarative in the profile patch; the TS side only adds a thin adapter (`src/verifier/pythonMcpVerifier.ts`) that calls the tool and routes by `verification.type: python`.
 
 ## Patch load path (DSH 0.2.1-rc.5)
 
-Confirmed from the installed Cordis bundle templates and the live profile: DSH does **not** auto-load a file named `verifier.patch.yml`. A bundle manifest declares `"dsh": { "bundle": { "patch": "..." } }` and the bundle is installed with `dsh plugin --profile <profile> add <bundle dir>`. The profile's own patch is `~/.dsh/profiles/<profile>/cordis.patch.yml`. The default patch is **`profiles/minimal.yml`** (`dsh.bundle.patch` in `package.json`); `cordis.patch.yml`, `gate.patch.yml` and `verifier.patch.yml` are authoritative/reference copies, not loaded by default. MCP client rows use `@deepseek-ai/dsh-mcp-client` with `serverName`, `transport: stdio`, `command`, `args`, and optional `cwd`/`env` (confirmed by the installed MCP bundle template).
+Confirmed from the installed Cordis bundle templates and the live profile: DSH does **not** auto-load a file named `verifier.patch.yml`. A bundle manifest declares `"dsh": { "bundle": { "patch": "..." } }` and the bundle is installed with `dsh plugin --profile <profile> add <bundle dir>`. The profile's own patch is `~/.dsh/profiles/<profile>/cordis.patch.yml`. The default patch is **`profiles/minimal.yml`** (`dsh.bundle.patch` in `package.json`); `gate.patch.yml` and `verifier.patch.yml` are historical reference copies, not loaded by default. A root-level `cordis.patch.yml` was deleted in 0.2.0: it was never loaded, duplicated rows under `--patch`, and had drifted from the profiles. MCP client rows use `@deepseek-ai/dsh-mcp-client` with `serverName`, `transport: stdio`, `command`, `args`, and optional `cwd`/`env` (confirmed by the installed MCP bundle template).
 
 Judge limitations: the LLM judge is auxiliary. A `pass` requires at least one deterministic signal (lexical overlap against resolved evidence text, score ≥ threshold). Judge-only positives are downgraded to `unknown` in both Python and the TS adapter (defense in depth). Unresolvable evidence, MCP errors, or unconfigured backends return `unknown` / `fail`, never a judge-only `pass`.
 
