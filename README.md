@@ -25,13 +25,13 @@ in this repository:
 
 | Server | Pinned version | Notes |
 |---|---|---|
-| `@modelcontextprotocol/server-filesystem` | `1.0.0` | verified in real DSH turns (ENOENT + success paths) |
+| `@modelcontextprotocol/server-filesystem` | `2.4.0` | run with `--read-only`: serves only the 10 non-mutating tools and rejects a direct `tools/call` for a write tool |
 | `@playwright/mcp` | `0.0.86` | present in the local npx cache; browser binary still required |
 
 To pre-install for an offline/production deployment:
 
 ```bash
-npx -y -p @modelcontextprotocol/server-filesystem@1.0.0 -c true
+npx -y -p @modelcontextprotocol/server-filesystem@2.4.0 -c true
 npx -y -p @playwright/mcp@0.0.86 -c true
 export npm_config_offline=true   # fail instead of fetching during runs
 ```

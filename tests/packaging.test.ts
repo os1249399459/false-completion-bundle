@@ -76,7 +76,7 @@ describe('probe: npx failure becomes SKIP with a fix', () => {
   it('shows the exact failing command and a one-line fix, never throws', () => {
     const report = probeVerifiers({
       npxFilesystemOk: false,
-      npxFailures: { filesystem: 'npx -y -p @modelcontextprotocol/server-filesystem@1.0.0 -c "true"' },
+      npxFailures: { filesystem: 'npx -y -p @modelcontextprotocol/server-filesystem@2.4.0 -c "true"' },
     })
     const line = report.lines.find((l) => l.includes('filesystem'))!
     expect(line).toContain('SKIP')
@@ -87,7 +87,7 @@ describe('probe: npx failure becomes SKIP with a fix', () => {
 
   it('probeNpxPackages returns failure data instead of throwing', async () => {
     const result = await probeNpxPackages(
-      { filesystem: '@modelcontextprotocol/server-filesystem@1.0.0' },
+      { filesystem: '@modelcontextprotocol/server-filesystem@2.4.0' },
       {
         timeoutMs: 1,
         runner: ((_cmd: string, _args: string[], _opts: unknown, cb: (e: Error | null) => void) =>

@@ -12,18 +12,25 @@
       name: 'false-completion-bundle'
 
     # Filesystem MCP verifier — deterministic file existence/content checks.
-    # Command points at the locally resolved server package so no network/registry
-    # call happens at startup. Root = current workspace via !!js.
+    # Pinned to 2.4.0 for `--read-only`: 1.0.0 registered 14 tools unconditionally
+    # (write_file, edit_file, create_directory, move_file included) and read no
+    # env vars at all. `--read-only` (added upstream in 2.2.0) serves only the 10
+    # tools that cannot change the filesystem, and rejects a direct tools/call for
+    # a write tool with "Tool ... not found" — enforcement is at the invocation
+    # level, not just the advertised list.
     - id: false-completion-filesystem-mcp
-      description: 'Filesystem verifier: deterministically checks file existence and content hashes.'
+      description: 'Filesystem verifier: read-only checks of file existence and content hashes.'
       name: '@deepseek-ai/dsh-mcp-client'
       config:
         serverName: false-completion-filesystem
         transport: stdio
-        command: node
+        command: npx
         args:
-          - /home/hex636869/.npm/_npx/a3241bba59c344f5/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js
-          - !!js process.cwd()
+          - '-y'
+          - '-p'
+          - '@modelcontextprotocol/server-filesystem@2.4.0'
+          - '-c'
+          - 'mcp-server-filesystem --read-only "$(pwd)"'
         failOnStartupError: false
 
     # Playwright MCP verifier — browser element/text/state assertions.

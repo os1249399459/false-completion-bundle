@@ -17,9 +17,9 @@
         args:
           - '-y'
           - '-p'
-          - '@modelcontextprotocol/server-filesystem@1.0.0'
+          - '@modelcontextprotocol/server-filesystem@2.4.0'
           - '-c'
-          - 'mcp-server-filesystem "$(pwd)"'
+          - 'mcp-server-filesystem --read-only "$(pwd)"'
         failOnStartupError: true
 
     # Playwright required — fail startup when DSH_FALSE_COMPLETION_PLAYWRIGHT

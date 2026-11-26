@@ -133,7 +133,7 @@ class CitingSuspendAdapter implements SuspendAdapter {
 if (!SERVER_AVAILABLE) {
   console.warn(
     '[verifierGateSeam] SKIPPED: @modelcontextprotocol/server-filesystem is not installed.\n' +
-    '  Install it (pnpm add -D @modelcontextprotocol/server-filesystem@1.0.0) or set FS_MCP_SERVER ' +
+    '  Install it (pnpm add -D @modelcontextprotocol/server-filesystem@2.4.0) or set FS_MCP_SERVER ' +
     'to its dist/index.js to run this seam test.',
   )
 }

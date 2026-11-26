@@ -13,7 +13,7 @@ Every row below maps to a real file or a real config row.
 | Row / file | Purpose |
 |---|---|
 | `false-completion-gate` → `entry/index.ts` (built `dist/entry/index.js`) | Plugin entry: binds `agent/turn-stopping`, emits evidence, applies gate/repetition/divergence aborts. |
-| `false-completion-filesystem-mcp` | `@deepseek-ai/dsh-mcp-client` row for `@modelcontextprotocol/server-filesystem@1.0.0`; deterministic file existence/hash checks. |
+| `false-completion-filesystem-mcp` | `@deepseek-ai/dsh-mcp-client` row for `@modelcontextprotocol/server-filesystem@2.4.0` run with `--read-only`; deterministic file existence/hash checks. 1.0.0 was the previous pin and registered 14 tools including `write_file`/`move_file`; `--read-only` exists from upstream 2.2.0. |
 | `false-completion-playwright-mcp` | MCP client for `@playwright/mcp@0.0.86`; disabled unless `DSH_FALSE_COMPLETION_PLAYWRIGHT=1`. |
 | `false-completion-python-mcp` | MCP client for `python/mcp_verifier/server.py` (FastMCP); disabled in minimal, mandatory in standard/strict-best-effort. |
 | `cordis.patch.yml` | Authoritative reference patch (all four rows), kept for manual/`--patch` use; default install uses `profiles/minimal.yml`. |
